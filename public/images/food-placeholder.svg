@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="280" viewBox="0 0 400 280">
+  <rect width="400" height="280" fill="#f0fdf4"/>
+  <circle cx="200" cy="120" r="55" fill="#dcfce7" stroke="#bbf7d0" stroke-width="2"/>
+  <text x="200" y="128" font-family="sans-serif" font-size="42" text-anchor="middle">🍽️</text>
+  <text x="200" y="195" font-family="sans-serif" font-size="13" fill="#9ca3af" text-anchor="middle">No image uploaded</text>
+</svg>
