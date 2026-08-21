@@ -2,6 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\BulkToggleProductsRequest;
+use App\Http\Requests\StoreProductRequest;
+use App\Http\Requests\UpdateProductRequest;
+use App\Jobs\SendOrderStatusEmailJob;
 use App\Models\Order;
 use App\Models\OrderAudit;
 use App\Models\OrderItem;
@@ -104,18 +108,9 @@ class AdminController extends Controller
         return view('admin.products', compact('products', 'categories', 'search', 'day', 'category', 'lowStockThreshold'));
     }
 
-    public function storeProduct(Request $request)
+    public function storeProduct(StoreProductRequest $request)
     {
-        $validated = $request->validate([
-            'name'             => 'required|string|max:100',
-            'category'         => 'nullable|string|max:50',
-            'description'      => 'nullable|string|max:500',
-            'price'            => 'required|numeric|min:0',
-            'stock'            => 'required|integer|min:0',
-            'day_availability' => 'required|in:common,monday,tuesday,wednesday,thursday,friday,saturday',
-            'image'            => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
-            'gallery.*'        => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
-        ]);
+        $validated = $request->validated();
 
         if ($request->hasFile('image')) {
             $filename = $request->file('image')->hashName();
@@ -136,20 +131,9 @@ class AdminController extends Controller
         return back()->with('success', 'Product added successfully.');
     }
 
-    public function updateProduct(Request $request, Product $product)
+    public function updateProduct(UpdateProductRequest $request, Product $product)
     {
-        $validated = $request->validate([
-            'name'             => 'required|string|max:100',
-            'category'         => 'nullable|string|max:50',
-            'description'      => 'nullable|string|max:500',
-            'price'            => 'required|numeric|min:0',
-            'stock'            => 'required|integer|min:0',
-            'day_availability' => 'required|in:common,monday,tuesday,wednesday,thursday,friday,saturday',
-            'image'            => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
-            'gallery.*'        => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
-            'remove_images'    => 'nullable|array',
-            'remove_images.*'  => 'integer',
-        ]);
+        $validated = $request->validated();
 
         if ($request->hasFile('image')) {
             if ($product->image) @unlink(public_path('images/' . $product->image));
@@ -193,13 +177,8 @@ class AdminController extends Controller
         return back()->with('success', 'Product deleted.');
     }
 
-    public function bulkToggle(Request $request)
+    public function bulkToggle(BulkToggleProductsRequest $request)
     {
-        $request->validate([
-            'ids'    => 'required|array',
-            'ids.*'  => 'integer',
-            'action' => 'required|in:enable,disable',
-        ]);
         Product::whereIn('id', $request->ids)
             ->update(['is_available' => $request->action === 'enable']);
         $count = count($request->ids);
@@ -270,6 +249,8 @@ class AdminController extends Controller
             'action'     => 'status_changed',
             'message'    => 'Status updated to ' . ucfirst($newStatus) . '.',
         ]);
+
+        SendOrderStatusEmailJob::dispatch($order->id, $newStatus);
 
         return back()->with('success', 'Order #' . str_pad($order->id, 4, '0', STR_PAD_LEFT) . ' status updated to ' . ucfirst($request->status) . '.');
     }
