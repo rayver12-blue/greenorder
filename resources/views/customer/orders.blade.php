@@ -78,6 +78,18 @@ img,canvas,svg{max-width:100%}
 .empty-pg{text-align:center;padding:4rem 2rem;background:#fff;border-radius:14px;border:1.5px dashed #d1fae5;color:#9ca3af}
 .go-btn{display:inline-flex;align-items:center;gap:.4rem;background:#166534;color:#fff;border-radius:10px;padding:.65rem 1.3rem;text-decoration:none;font-weight:700;font-size:.85rem;margin-top:1rem;transition:background .15s}
 .go-btn:hover{background:#14532d}
+.filter-bar{display:flex;align-items:center;gap:.65rem;flex-wrap:wrap;margin-bottom:1rem}
+.ftabs{display:flex;gap:.35rem;flex-wrap:wrap;flex:1}
+.ftab{display:inline-flex;align-items:center;gap:.3rem;padding:.35rem .8rem;border-radius:20px;font-size:.78rem;font-weight:700;border:1.5px solid #e5e7eb;background:#fff;color:#9ca3af;text-decoration:none;transition:all .15s;white-space:nowrap}
+.ftab:hover{border-color:#16a34a;color:#166534}
+.ftab.active{background:#166534;color:#fff;border-color:#166534}
+.ftab .badge{background:rgba(255,255,255,.25);border-radius:20px;padding:.05rem .4rem;font-size:.68rem;margin-left:.15rem}
+.ftab:not(.active) .badge{background:#f0fdf4;color:#166534}
+.search-box{display:flex;align-items:center;background:#fff;border:1.5px solid #d1fae5;border-radius:50px;padding:.38rem .9rem;gap:.5rem;transition:border-color .2s}
+.search-box:focus-within{border-color:#16a34a}
+.search-box input{border:none;outline:none;font-family:inherit;font-size:.82rem;color:#1a2e1a;background:transparent;width:140px}
+.rbtn{display:inline-flex;align-items:center;gap:.3rem;background:#f0fdf4;color:#166534;border:1.5px solid #bbf7d0;border-radius:8px;padding:.28rem .6rem;font-size:.72rem;font-weight:700;cursor:pointer;font-family:inherit;transition:all .15s;text-decoration:none;white-space:nowrap}
+.rbtn:hover{background:#dcfce7}
 
 @media (max-width: 900px){
   .nav{height:auto;padding:.75rem 1rem;flex-wrap:wrap;gap:.6rem}
@@ -142,6 +154,22 @@ img,canvas,svg{max-width:100%}
     My Orders
   </div>
 
+  <div class="filter-bar">
+    <div class="ftabs">
+      @foreach(['all'=>'All','pending'=>'Placed','processing'=>'Preparing','delivered'=>'Done','cancelled'=>'Cancelled'] as $key=>$label)
+        <a href="{{ route('customer.orders', array_merge(request()->query(), ['status'=>$key, 'page'=>1])) }}"
+           class="ftab {{ $status===$key ? 'active' : '' }}">
+          {{ $label }}<span class="badge">{{ $counts[$key] }}</span>
+        </a>
+      @endforeach
+    </div>
+    <form method="GET" action="{{ route('customer.orders') }}" class="search-box">
+      <input type="hidden" name="status" value="{{ $status }}">
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="text" name="q" value="{{ $search ?? '' }}" placeholder="Search order #...">
+    </form>
+  </div>
+
   @if(session('success'))
     <div class="flash fs"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>{{ session('success') }}</div>
   @endif
@@ -176,6 +204,14 @@ img,canvas,svg{max-width:100%}
           @elseif($order->status==='delivered') Done
           @else Cancelled @endif
         </span>
+        <a href="{{ route('customer.orders.receipt', $order) }}" class="rbtn" onclick="event.stopPropagation()">
+          <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          Receipt
+        </a>
+        <button class="rbtn" style="background:#fff7ed;color:#9a3412;border-color:#fed7aa" onclick="event.stopPropagation();reorder({{ $order->items->map(fn($i)=>['id'=>$i->product_id,'name'=>$i->product?->name ?? '','price'=>(float)$i->unit_price,'qty'=>$i->quantity])->values() }})">
+          <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.5"/></svg>
+          Reorder
+        </button>
         @if(in_array($order->status, ['pending','processing'], true))
           <form method="POST" action="{{ route('customer.orders.cancel', $order) }}" onsubmit="return confirm('Cancel this order?');" onclick="event.stopPropagation();">
             @csrf @method('PATCH')
@@ -276,11 +312,30 @@ img,canvas,svg{max-width:100%}
 </div>
 
 <script>
+const CART_KEY = 'greenorder_cart_v1_user_{{ auth()->id() }}';
+
 function toggle(id) {
   const b = document.getElementById('body-'+id);
   const c = document.getElementById('chev-'+id);
   const show = b.classList.toggle('show');
   c.classList.toggle('open', show);
+}
+
+function reorder(items) {
+  if (!items || !items.length) return;
+  try {
+    let cart = [];
+    try { cart = JSON.parse(localStorage.getItem(CART_KEY)) || []; } catch(_) {}
+    items.forEach(item => {
+      const ex = cart.find(c => c.id === item.id);
+      if (ex) ex.qty += item.qty;
+      else cart.push({ id: item.id, name: item.name, price: item.price, qty: item.qty });
+    });
+    localStorage.setItem(CART_KEY, JSON.stringify(cart));
+    window.location.href = '{{ route('customer.home') }}';
+  } catch(_) {
+    window.location.href = '{{ route('customer.home') }}';
+  }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -291,8 +346,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   @if(session('success'))
-  const userId = {{ auth()->id() }};
-  localStorage.removeItem('greenorder_cart_v1_user_' + userId);
+  localStorage.removeItem(CART_KEY);
   @endif
 });
 </script>
