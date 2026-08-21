@@ -1,4 +1,4 @@
-﻿@extends('layouts.main')
+@extends('layouts.main')
 @section('title', 'Manage Products')
 @section('content')
 <style>
@@ -6,7 +6,6 @@
 body{background:#f5f5f0;margin:0;font-family:'Plus Jakarta Sans',sans-serif;overflow-x:hidden}
 img,canvas,svg{max-width:100%}
 .al{display:flex;min-height:100vh}
-/* SIDEBAR */
 .sb{width:240px;background:#fff;border-right:1px solid #dcfce7;display:flex;flex-direction:column;padding:1.25rem 0;position:fixed;top:0;left:0;height:100vh;overflow-y:auto;z-index:50}
 .sb-brand{display:flex;align-items:center;gap:.65rem;padding:0 1.25rem 1.25rem;border-bottom:1px solid #dcfce7;margin-bottom:.85rem}
 .sb-brand img{width:34px;height:34px;object-fit:contain}
@@ -19,22 +18,17 @@ img,canvas,svg{max-width:100%}
 .sbn li a.active{background:#dcfce7;color:#166534;font-weight:700}
 .sbn li.lo button{color:#dc2626}
 .sbn li.lo button:hover{background:#fef2f2}
-/* MAIN */
 .mc{margin-left:240px;flex:1;padding:1.75rem;background:#f5f5f0;min-height:100vh;min-width:0}
-/* PAGE HEADER */
 .ph{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;gap:1rem}
 .ph-l h1{font-size:1.4rem;font-weight:800;color:#1a2e1a;margin:0 0 .15rem}
 .ph-l p{font-size:.83rem;color:#5a7a5a;margin:0}
-/* BUTTONS */
 .btn-add{display:inline-flex;align-items:center;gap:.4rem;background:#166534;color:#fff;border:none;border-radius:10px;padding:.6rem 1.1rem;font-size:.85rem;font-weight:700;cursor:pointer;font-family:inherit;transition:background .15s;text-decoration:none;white-space:nowrap}
 .btn-add:hover{background:#14532d}
 .btn-edit{display:inline-flex;align-items:center;gap:.3rem;background:#f0fdf4;color:#166534;border:1.5px solid #bbf7d0;border-radius:8px;padding:.32rem .7rem;font-size:.76rem;font-weight:700;cursor:pointer;font-family:inherit;transition:all .15s;white-space:nowrap}
 .btn-edit:hover{background:#dcfce7;border-color:#86efac}
 .btn-del{display:inline-flex;align-items:center;gap:.3rem;background:#fef2f2;color:#dc2626;border:1.5px solid #fecaca;border-radius:8px;padding:.32rem .7rem;font-size:.76rem;font-weight:700;cursor:pointer;font-family:inherit;transition:all .15s;white-space:nowrap}
 .btn-del:hover{background:#fee2e2;border-color:#fca5a5}
-/* ALERTS */
 .alert-s{background:#f0fdf4;border:1px solid #bbf7d0;color:#166534;border-radius:10px;padding:.7rem 1rem;font-size:.83rem;margin-bottom:1rem;display:flex;align-items:center;gap:.5rem}
-/* FILTER BAR */
 .fbar{display:flex;align-items:flex-end;gap:.75rem;flex-wrap:wrap;background:#fff;border:1px solid #f0fdf4;border-radius:14px;padding:.85rem 1rem;box-shadow:0 1px 3px rgba(0,0,0,.04);margin-bottom:1rem}
 .fgroup{display:flex;flex-direction:column;gap:.35rem}
 .fgroup label{font-size:.7rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#5a7a5a}
@@ -45,6 +39,17 @@ img,canvas,svg{max-width:100%}
 .fbtn.apply:hover{background:#14532d}
 .fbtn.clear{background:#f5f5f0;color:#5a7a5a;border:1.5px solid #e5e7eb}
 .fbtn.clear:hover{background:#e5e7eb}
+/* BULK BAR */
+.bulk-bar{display:none;align-items:center;gap:.65rem;background:#fff;border:1.5px solid #bbf7d0;border-radius:12px;padding:.6rem 1rem;margin-bottom:.75rem;flex-wrap:wrap}
+.bulk-bar.show{display:flex}
+.bulk-count{font-size:.83rem;font-weight:700;color:#166534}
+.btn-bulk{display:inline-flex;align-items:center;gap:.3rem;border:none;border-radius:8px;padding:.35rem .8rem;font-size:.78rem;font-weight:700;cursor:pointer;font-family:inherit;transition:all .15s}
+.btn-bulk.enable{background:#f0fdf4;color:#166534;border:1.5px solid #bbf7d0}
+.btn-bulk.enable:hover{background:#dcfce7}
+.btn-bulk.disable{background:#fff7ed;color:#9a3412;border:1.5px solid #fed7aa}
+.btn-bulk.disable:hover{background:#ffedd5}
+.btn-bulk.desel{background:#f5f5f0;color:#5a7a5a;border:1.5px solid #e5e7eb}
+.btn-bulk.desel:hover{background:#e5e7eb}
 /* TABLE */
 .tcard{background:#fff;border-radius:14px;box-shadow:0 1px 3px rgba(0,0,0,.06),0 2px 8px rgba(0,0,0,.05);border:1px solid #f0fdf4;overflow:hidden;margin-bottom:1rem;min-width:0}
 table{width:100%;border-collapse:collapse}
@@ -52,10 +57,21 @@ th{padding:.7rem 1rem;text-align:left;font-size:.72rem;font-weight:700;text-tran
 td{padding:.75rem 1rem;font-size:.83rem;color:#1a2e1a;border-bottom:1px solid #f9fafb;vertical-align:middle}
 tr:last-child td{border-bottom:none}
 tr:hover td{background:#fafafa}
-.prod-img{width:42px;height:42px;border-radius:8px;object-fit:cover;flex-shrink:0}
+tr.selected td{background:#f0fdf4}
+.prod-img{width:42px;height:42px;border-radius:8px;object-fit:cover;flex-shrink:0;cursor:pointer}
 .prod-img-ph{width:42px;height:42px;border-radius:8px;background:#f0fdf4;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0}
 .day-pill{display:inline-flex;background:#f0fdf4;color:#166534;font-size:.72rem;font-weight:700;padding:.2rem .6rem;border-radius:20px;white-space:nowrap}
+.avail-pill{display:inline-flex;font-size:.72rem;font-weight:700;padding:.2rem .6rem;border-radius:20px;white-space:nowrap}
 .actions{display:flex;align-items:center;gap:.4rem;flex-wrap:nowrap}
+/* STARS */
+.stars{display:flex;align-items:center;gap:1px;font-size:.78rem}
+.star-fill{color:#f59e0b}
+.star-empty{color:#d1d5db}
+.rating-val{font-size:.72rem;color:#9ca3af;margin-left:.25rem}
+/* GALLERY THUMBS */
+.gthumb-row{display:flex;gap:.3rem;flex-wrap:wrap;margin-top:.3rem}
+.gthumb{width:28px;height:28px;border-radius:4px;object-fit:cover;cursor:pointer;border:1.5px solid #e5e7eb;transition:border-color .13s}
+.gthumb:hover{border-color:#16a34a}
 /* PAGINATION */
 .pag{display:flex;align-items:center;gap:.35rem;flex-wrap:wrap;margin-top:.75rem}
 .pag a,.pag span{display:inline-flex;align-items:center;justify-content:center;min-width:32px;height:32px;padding:0 .55rem;border-radius:8px;font-size:.8rem;font-weight:600;text-decoration:none;border:1.5px solid #e5e7eb;background:#fff;color:#6b7280;transition:all .13s}
@@ -66,7 +82,7 @@ tr:hover td{background:#fafafa}
 /* MODAL */
 .mover{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300;display:flex;align-items:center;justify-content:center;padding:1rem;opacity:0;pointer-events:none;transition:opacity .22s}
 .mover.open{opacity:1;pointer-events:all}
-.mbox{background:#fff;border-radius:16px;max-width:520px;width:100%;max-height:92vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,.16);transform:translateY(18px);transition:transform .22s}
+.mbox{background:#fff;border-radius:16px;max-width:560px;width:100%;max-height:92vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,.16);transform:translateY(18px);transition:transform .22s}
 .mover.open .mbox{transform:none}
 .mhd{padding:1.1rem 1.4rem;border-bottom:1px solid #f0fdf4;display:flex;justify-content:space-between;align-items:center}
 .mhd h3{font-weight:800;font-size:1rem;color:#1a2e1a}
@@ -74,7 +90,6 @@ tr:hover td{background:#fafafa}
 .mc-btn:hover{color:#1a2e1a}
 .mbody{padding:1.25rem 1.4rem}
 .mfoot{padding:1rem 1.4rem;border-top:1px solid #f0fdf4;display:flex;justify-content:flex-end;gap:.65rem}
-/* FORM FIELDS */
 .fg{margin-bottom:.9rem}
 .fg label{display:block;font-size:.78rem;font-weight:700;color:#1a2e1a;margin-bottom:.32rem}
 .fc{width:100%;padding:.62rem .85rem;border:1.5px solid #d1fae5;border-radius:10px;font-family:inherit;font-size:.875rem;color:#1a2e1a;background:#f9fefb;outline:none;transition:border-color .18s,box-shadow .18s}
@@ -84,40 +99,45 @@ tr:hover td{background:#fafafa}
 .btn-cancel:hover{background:#e5e7eb}
 .btn-save{background:#166534;color:#fff;border:none;border-radius:10px;padding:.6rem 1.3rem;font-family:inherit;font-size:.85rem;font-weight:700;cursor:pointer;transition:background .15s}
 .btn-save:hover{background:#14532d}
-
+/* GALLERY EDIT */
+.gallery-edit{display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.4rem}
+.gedit-item{position:relative;width:60px;height:60px}
+.gedit-item img{width:60px;height:60px;border-radius:8px;object-fit:cover;border:1.5px solid #e5e7eb}
+.gedit-rm{position:absolute;top:-6px;right:-6px;width:18px;height:18px;border-radius:50%;background:#dc2626;color:#fff;border:none;cursor:pointer;font-size:.7rem;line-height:1;display:flex;align-items:center;justify-content:center;padding:0}
+/* LIGHTBOX */
+.lb{position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:500;display:none;align-items:center;justify-content:center;flex-direction:column;gap:.75rem}
+.lb.open{display:flex}
+.lb img{max-width:90vw;max-height:80vh;border-radius:10px;object-fit:contain}
+.lb-close{position:absolute;top:1rem;right:1.25rem;background:none;border:none;color:#fff;font-size:2rem;cursor:pointer;line-height:1}
+.lb-nav{display:flex;gap:1rem}
+.lb-nav button{background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:8px;padding:.4rem .9rem;font-size:.85rem;cursor:pointer;font-family:inherit;font-weight:700}
+.lb-nav button:hover{background:rgba(255,255,255,.28)}
 @media (max-width: 980px){
   .al{flex-direction:column}
-  .sb{position:relative;width:100%;height:auto;border-right:0;border-bottom:1px solid #dcfce7}
-  .sb-brand{padding:0 1rem 1rem}
-  .sb-brand img{width:48px;height:48px}
-  .sb-label{padding:0 1rem}
-  .sbn{display:grid;grid-template-columns:1fr 1fr;gap:.4rem;padding:0 1rem}
+  .sb{position:fixed;transform:translateX(-100%);transition:transform .2s ease;width:240px;z-index:75}
+  .sb.open{transform:translateX(0)}
+  .sb-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:70}
+  .sb-overlay.show{display:block}
   .mc{margin-left:0;padding:1rem}
   .ph{flex-direction:column;align-items:flex-start}
   .fbar{flex-direction:column;align-items:stretch}
   .finput,.fselect{min-width:0;width:100%}
   .tcard{overflow-x:auto}
-  table{min-width:820px}
+  table{min-width:860px}
   .fc-2{grid-template-columns:1fr}
 }
-/* Mobile sidebar toggle */
 .mb{display:none;align-items:center;gap:.6rem;margin-bottom:1rem}
 .mb-title{font-size:.95rem;font-weight:800;color:#1a2e1a}
 .sb-toggle{display:none;background:#fff;border:1px solid #dcfce7;border-radius:10px;padding:.45rem .6rem;font-size:.9rem;cursor:pointer}
-.sb-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:70}
 @media (max-width: 980px){
   .mb{display:flex}
   .sb-toggle{display:inline-flex;align-items:center;justify-content:center}
-  .sb{position:fixed;transform:translateX(-100%);transition:transform .2s ease;width:240px;z-index:75}
-  .sb.open{transform:translateX(0)}
-  .sb-overlay.show{display:block}
 }
 </style>
 
 <div class="al">
-  <div class="sb-overlay" onclick="toggleSidebar(false)"></div>
-  <!-- SIDEBAR -->
-  <aside class="sb">
+  <div class="sb-overlay" id="sb-ov" onclick="toggleSidebar(false)"></div>
+  <aside class="sb" id="sidebar">
     <div class="sb-brand">
       <img src="{{ asset('images/greenorder_icon.png') }}" alt="GreenOrder">
       <div class="sb-brand-text"><strong>GreenOrder</strong><span>Admin Console</span></div>
@@ -154,7 +174,6 @@ tr:hover td{background:#fafafa}
     </ul>
   </aside>
 
-  <!-- MAIN -->
   <main class="mc">
     <div class="mb">
       <button class="sb-toggle" type="button" onclick="toggleSidebar()">&#9776;</button>
@@ -181,7 +200,7 @@ tr:hover td{background:#fafafa}
     <form class="fbar" method="GET" action="{{ route('admin.products') }}">
       <div class="fgroup">
         <label for="q">Search</label>
-        <input id="q" name="q" class="fc finput" type="text" value="{{ $search ?? '' }}" placeholder="Search name, category, or description">
+        <input id="q" name="q" class="fc finput" type="text" value="{{ $search ?? '' }}" placeholder="Search name, category...">
       </div>
       <div class="fgroup">
         <label for="category">Category</label>
@@ -207,39 +226,77 @@ tr:hover td{background:#fafafa}
       </div>
     </form>
 
+    {{-- BULK ACTION BAR --}}
+    <div class="bulk-bar" id="bulk-bar">
+      <span class="bulk-count" id="bulk-count">0 selected</span>
+      <form method="POST" action="{{ route('admin.products.bulk-toggle') }}" id="bulk-form">
+        @csrf
+        <div id="bulk-ids"></div>
+        <input type="hidden" name="action" id="bulk-action" value="enable">
+        <button type="button" class="btn-bulk enable" onclick="submitBulk('enable')">
+          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+          Enable
+        </button>
+        <button type="button" class="btn-bulk disable" onclick="submitBulk('disable')">
+          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          Disable
+        </button>
+      </form>
+      <button type="button" class="btn-bulk desel" onclick="clearSelection()">Deselect All</button>
+    </div>
+
     <div class="tcard">
       <table>
         <thead>
           <tr>
+            <th style="width:36px"><input type="checkbox" id="chk-all" onchange="toggleAll(this)" style="cursor:pointer"></th>
             <th>Product</th>
             <th>Category</th>
             <th>Price</th>
             <th>Stock</th>
-            <th>Availability</th>
+            <th>Rating</th>
+            <th>Status</th>
+            <th>Day</th>
             <th style="text-align:center">Actions</th>
           </tr>
         </thead>
         <tbody>
           @forelse($products as $product)
-          <tr>
+          @php
+            $allImgs = $product->images->pluck('path')->toArray();
+            $rating  = round($product->reviews_avg_rating ?? 0, 1);
+            $rcount  = $product->reviews_count ?? 0;
+          @endphp
+          <tr id="row-{{ $product->id }}">
+            <td><input type="checkbox" class="row-chk" value="{{ $product->id }}" onchange="updateBulk()" style="cursor:pointer"></td>
             <td>
               <div style="display:flex;align-items:center;gap:.75rem">
                 @if($product->image)
-                  <img src="{{ asset('images/' . $product->image) }}" class="prod-img" alt="{{ $product->name }}">
+                  <img src="{{ asset('images/' . $product->image) }}" class="prod-img" alt="{{ $product->name }}"
+                       onclick="openLightbox({{ json_encode(array_merge([$product->image], $allImgs)) }}, 0)">
                 @else
-                  <div class="prod-img-ph">[img]</div>
+                  <div class="prod-img-ph">🍽️</div>
                 @endif
                 <div>
                   <div style="font-weight:700;font-size:.88rem;color:#1a2e1a">{{ $product->name }}</div>
                   @if($product->description)
-                    <div style="font-size:.72rem;color:#9ca3af;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ $product->description }}</div>
+                    <div style="font-size:.72rem;color:#9ca3af;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ $product->description }}</div>
+                  @endif
+                  @if($allImgs)
+                    <div class="gthumb-row">
+                      @foreach(array_slice($allImgs, 0, 4) as $gi => $gp)
+                        <img src="{{ asset('images/'.$gp) }}" class="gthumb"
+                             onclick="openLightbox({{ json_encode(array_merge([$product->image], $allImgs)) }}, {{ $gi + 1 }})">
+                      @endforeach
+                      @if(count($allImgs) > 4)
+                        <span style="font-size:.68rem;color:#9ca3af;align-self:center">+{{ count($allImgs)-4 }}</span>
+                      @endif
+                    </div>
                   @endif
                 </div>
               </div>
             </td>
-            <td>
-              <div style="font-size:.8rem;font-weight:700;color:#1a2e1a">{{ $product->category ?? '—' }}</div>
-            </td>
+            <td><div style="font-size:.8rem;font-weight:700;color:#1a2e1a">{{ $product->category ?? '—' }}</div></td>
             <td style="font-weight:800;color:#166534;white-space:nowrap">₱{{ number_format($product->price, 2) }}</td>
             <td>
               @php $inStock = ($product->stock ?? 0) > 0; @endphp
@@ -247,19 +304,39 @@ tr:hover td{background:#fafafa}
                 {{ $product->stock ?? 0 }}
               </span>
             </td>
+            <td>
+              <div class="stars">
+                @for($s = 1; $s <= 5; $s++)
+                  <span class="{{ $s <= round($rating) ? 'star-fill' : 'star-empty' }}">★</span>
+                @endfor
+                <span class="rating-val">{{ $rating > 0 ? $rating : '—' }}{{ $rcount ? ' ('.$rcount.')' : '' }}</span>
+              </div>
+            </td>
+            <td>
+              <span class="avail-pill" style="background:{{ ($product->is_available ?? true) ? '#f0fdf4' : '#fef2f2' }};color:{{ ($product->is_available ?? true) ? '#166534' : '#dc2626' }}">
+                {{ ($product->is_available ?? true) ? 'Available' : 'Disabled' }}
+              </span>
+            </td>
             <td><span class="day-pill">{{ ucfirst($product->day_availability) }}</span></td>
             <td>
               <div class="actions" style="justify-content:center">
-                {{-- EDIT BUTTON --}}
-                <button class="btn-edit" onclick="openEdit({{ $product->id }}, '{{ addslashes($product->name) }}', '{{ addslashes($product->category ?? '') }}', '{{ addslashes($product->description ?? '') }}', {{ $product->price }}, {{ $product->stock ?? 0 }}, '{{ $product->day_availability }}')">
+                <button class="btn-edit" onclick="openEdit(
+                  {{ $product->id }},
+                  '{{ addslashes($product->name) }}',
+                  '{{ addslashes($product->category ?? '') }}',
+                  '{{ addslashes($product->description ?? '') }}',
+                  {{ $product->price }},
+                  {{ $product->stock ?? 0 }},
+                  '{{ $product->day_availability }}',
+                  {{ json_encode($product->images->map(fn($i) => ['id'=>$i->id,'path'=>$i->path])->toArray()) }}
+                )">
                   <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                   Edit
                 </button>
-                {{-- DELETE BUTTON --}}
-                <form method="POST" action="{{ route('admin.products.destroy', $product) }}" onsubmit="return confirm('Delete {{ addslashes($product->name) }}? This cannot be undone.')">
+                <form method="POST" action="{{ route('admin.products.destroy', $product) }}" onsubmit="return confirm('Delete {{ addslashes($product->name) }}?')">
                   @csrf @method('DELETE')
                   <button type="submit" class="btn-del">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
                     Delete
                   </button>
                 </form>
@@ -268,8 +345,8 @@ tr:hover td{background:#fafafa}
           </tr>
           @empty
           <tr>
-            <td colspan="6" style="text-align:center;padding:3rem;color:#9ca3af">
-              <div style="font-size:1.5rem;margin-bottom:.5rem">[img]</div>
+            <td colspan="9" style="text-align:center;padding:3rem;color:#9ca3af">
+              <div style="font-size:1.5rem;margin-bottom:.5rem">🍽️</div>
               <div style="font-weight:600;margin-bottom:.25rem">No products yet</div>
               <div style="font-size:.8rem">Click "Add Product" to create your first menu item.</div>
             </td>
@@ -279,18 +356,14 @@ tr:hover td{background:#fafafa}
       </table>
     </div>
 
-    {{-- CLEAN PAGINATION --}}
     @if($products->hasPages())
     <div>
       <div class="pag">
-        {{-- Previous --}}
         @if($products->onFirstPage())
-          <span class="disabled">? Prev</span>
+          <span class="disabled">← Prev</span>
         @else
-          <a href="{{ $products->previousPageUrl() }}">? Prev</a>
+          <a href="{{ $products->previousPageUrl() }}">← Prev</a>
         @endif
-
-        {{-- Page numbers --}}
         @foreach($products->getUrlRange(max(1,$products->currentPage()-2), min($products->lastPage(),$products->currentPage()+2)) as $page => $url)
           @if($page == $products->currentPage())
             <span class="active-page">{{ $page }}</span>
@@ -298,17 +371,13 @@ tr:hover td{background:#fafafa}
             <a href="{{ $url }}">{{ $page }}</a>
           @endif
         @endforeach
-
-        {{-- Next --}}
         @if($products->hasMorePages())
-          <a href="{{ $products->nextPageUrl() }}">Next ?</a>
+          <a href="{{ $products->nextPageUrl() }}">Next →</a>
         @else
-          <span class="disabled">Next ?</span>
+          <span class="disabled">Next →</span>
         @endif
       </div>
-      <div class="pag-info">
-        Showing {{ $products->firstItem() }}–{{ $products->lastItem() }} of {{ $products->total() }} products
-      </div>
+      <div class="pag-info">Showing {{ $products->firstItem() }}–{{ $products->lastItem() }} of {{ $products->total() }} products</div>
     </div>
     @endif
   </main>
@@ -319,7 +388,7 @@ tr:hover td{background:#fafafa}
   <div class="mbox">
     <div class="mhd">
       <h3>Add New Product</h3>
-      <button class="mc-btn" onclick="closeModal('add-modal')">x</button>
+      <button class="mc-btn" onclick="closeModal('add-modal')">✕</button>
     </div>
     <form method="POST" action="{{ route('admin.products.store') }}" enctype="multipart/form-data">
       @csrf
@@ -344,8 +413,8 @@ tr:hover td{background:#fafafa}
           <div class="fg">
             <label>Day Availability *</label>
             <select name="day_availability" class="fc">
-              @foreach(['common','monday','tuesday','wednesday','thursday','friday','saturday'] as $day)
-                <option value="{{ $day }}">{{ ucfirst($day) }}</option>
+              @foreach(['common','monday','tuesday','wednesday','thursday','friday','saturday'] as $d)
+                <option value="{{ $d }}">{{ ucfirst($d) }}</option>
               @endforeach
             </select>
           </div>
@@ -355,9 +424,14 @@ tr:hover td{background:#fafafa}
           <input type="number" name="stock" class="fc" placeholder="0" min="0" step="1" required>
         </div>
         <div class="fg">
-          <label>Product Image</label>
+          <label>Cover Image</label>
           <input type="file" name="image" class="fc" accept="image/jpeg,image/png,image/webp" style="padding:.45rem .85rem">
           <div style="font-size:.72rem;color:#9ca3af;margin-top:.25rem">JPG, PNG or WebP — max 2MB</div>
+        </div>
+        <div class="fg">
+          <label>Gallery Images <span style="font-weight:400;color:#9ca3af">(optional, multiple)</span></label>
+          <input type="file" name="gallery[]" class="fc" accept="image/jpeg,image/png,image/webp" multiple style="padding:.45rem .85rem">
+          <div style="font-size:.72rem;color:#9ca3af;margin-top:.25rem">Select multiple files — max 2MB each</div>
         </div>
       </div>
       <div class="mfoot">
@@ -373,7 +447,7 @@ tr:hover td{background:#fafafa}
   <div class="mbox">
     <div class="mhd">
       <h3>Edit Product</h3>
-      <button class="mc-btn" onclick="closeModal('edit-modal')">x</button>
+      <button class="mc-btn" onclick="closeModal('edit-modal')">✕</button>
     </div>
     <form method="POST" id="edit-form" enctype="multipart/form-data">
       @csrf @method('PUT')
@@ -398,8 +472,8 @@ tr:hover td{background:#fafafa}
           <div class="fg">
             <label>Day Availability *</label>
             <select name="day_availability" id="edit-day" class="fc">
-              @foreach(['common','monday','tuesday','wednesday','thursday','friday','saturday'] as $day)
-                <option value="{{ $day }}">{{ ucfirst($day) }}</option>
+              @foreach(['common','monday','tuesday','wednesday','thursday','friday','saturday'] as $d)
+                <option value="{{ $d }}">{{ ucfirst($d) }}</option>
               @endforeach
             </select>
           </div>
@@ -409,9 +483,17 @@ tr:hover td{background:#fafafa}
           <input type="number" name="stock" id="edit-stock" class="fc" min="0" step="1" required>
         </div>
         <div class="fg">
-          <label>Replace Image <span style="font-weight:400;color:#9ca3af">(leave blank to keep current)</span></label>
+          <label>Replace Cover Image <span style="font-weight:400;color:#9ca3af">(leave blank to keep)</span></label>
           <input type="file" name="image" class="fc" accept="image/jpeg,image/png,image/webp" style="padding:.45rem .85rem">
-          <div style="font-size:.72rem;color:#9ca3af;margin-top:.25rem">JPG, PNG or WebP — max 2MB</div>
+        </div>
+        <div class="fg">
+          <label>Current Gallery</label>
+          <div class="gallery-edit" id="edit-gallery"></div>
+          <div style="font-size:.72rem;color:#9ca3af;margin-top:.3rem">Click ✕ to remove an image</div>
+        </div>
+        <div class="fg">
+          <label>Add More Gallery Images</label>
+          <input type="file" name="gallery[]" class="fc" accept="image/jpeg,image/png,image/webp" multiple style="padding:.45rem .85rem">
         </div>
       </div>
       <div class="mfoot">
@@ -422,28 +504,134 @@ tr:hover td{background:#fafafa}
   </div>
 </div>
 
+{{-- LIGHTBOX --}}
+<div class="lb" id="lightbox" onclick="if(event.target===this)closeLightbox()">
+  <button class="lb-close" onclick="closeLightbox()">✕</button>
+  <img id="lb-img" src="" alt="">
+  <div class="lb-nav">
+    <button onclick="lbNav(-1)">← Prev</button>
+    <button onclick="lbNav(1)">Next →</button>
+  </div>
+</div>
+
 <script>
 function openModal(id)  { document.getElementById(id).classList.add('open'); }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 
-function openEdit(id, name, category, desc, price, stock, day) {
+function toggleSidebar(force) {
+  const sb = document.getElementById('sidebar');
+  const ov = document.getElementById('sb-ov');
+  const open = force !== undefined ? force : !sb.classList.contains('open');
+  sb.classList.toggle('open', open);
+  ov.classList.toggle('show', open);
+}
+
+// ── Edit modal ──────────────────────────────────────────────────────────────
+function openEdit(id, name, category, desc, price, stock, day, images) {
   const base = '{{ rtrim(url("admin/products"), "/") }}/';
   document.getElementById('edit-form').action = base + id;
-  document.getElementById('edit-name').value  = name;
+  document.getElementById('edit-name').value     = name;
   document.getElementById('edit-category').value = category;
-  document.getElementById('edit-desc').value  = desc;
-  document.getElementById('edit-price').value = price;
-  document.getElementById('edit-stock').value = stock ?? 0;
-  document.getElementById('edit-day').value   = day;
+  document.getElementById('edit-desc').value     = desc;
+  document.getElementById('edit-price').value    = price;
+  document.getElementById('edit-stock').value    = stock ?? 0;
+  document.getElementById('edit-day').value      = day;
+
+  // Render existing gallery with remove checkboxes
+  const gallery = document.getElementById('edit-gallery');
+  gallery.innerHTML = '';
+  // Remove hidden inputs from previous open
+  document.querySelectorAll('input[name="remove_images[]"]').forEach(el => el.remove());
+
+  if (images && images.length) {
+    images.forEach(img => {
+      const wrap = document.createElement('div');
+      wrap.className = 'gedit-item';
+      wrap.id = 'gedit-' + img.id;
+      wrap.innerHTML = `<img src="/images/${img.path}" alt="">
+        <button type="button" class="gedit-rm" onclick="removeGalleryImg(${img.id})" title="Remove">✕</button>`;
+      gallery.appendChild(wrap);
+    });
+  } else {
+    gallery.innerHTML = '<span style="font-size:.78rem;color:#9ca3af">No gallery images</span>';
+  }
+
   openModal('edit-modal');
 }
 
-// Close modal on Escape
+function removeGalleryImg(id) {
+  const wrap = document.getElementById('gedit-' + id);
+  if (wrap) wrap.remove();
+  const input = document.createElement('input');
+  input.type  = 'hidden';
+  input.name  = 'remove_images[]';
+  input.value = id;
+  document.getElementById('edit-form').appendChild(input);
+}
+
+// ── Bulk selection ──────────────────────────────────────────────────────────
+function updateBulk() {
+  const checked = document.querySelectorAll('.row-chk:checked');
+  const bar = document.getElementById('bulk-bar');
+  document.getElementById('bulk-count').textContent = checked.length + ' selected';
+  bar.classList.toggle('show', checked.length > 0);
+  document.getElementById('chk-all').indeterminate =
+    checked.length > 0 && checked.length < document.querySelectorAll('.row-chk').length;
+  document.getElementById('chk-all').checked =
+    checked.length === document.querySelectorAll('.row-chk').length;
+}
+
+function toggleAll(master) {
+  document.querySelectorAll('.row-chk').forEach(c => c.checked = master.checked);
+  updateBulk();
+}
+
+function clearSelection() {
+  document.querySelectorAll('.row-chk').forEach(c => c.checked = false);
+  document.getElementById('chk-all').checked = false;
+  updateBulk();
+}
+
+function submitBulk(action) {
+  const checked = document.querySelectorAll('.row-chk:checked');
+  if (!checked.length) return;
+  const form = document.getElementById('bulk-form');
+  document.getElementById('bulk-action').value = action;
+  const container = document.getElementById('bulk-ids');
+  container.innerHTML = '';
+  checked.forEach(c => {
+    const inp = document.createElement('input');
+    inp.type  = 'hidden';
+    inp.name  = 'ids[]';
+    inp.value = c.value;
+    container.appendChild(inp);
+  });
+  form.submit();
+}
+
+// ── Lightbox ────────────────────────────────────────────────────────────────
+let lbImages = [], lbIndex = 0;
+
+function openLightbox(images, index) {
+  lbImages = images.filter(Boolean);
+  lbIndex  = index;
+  document.getElementById('lb-img').src = '/images/' + lbImages[lbIndex];
+  document.getElementById('lightbox').classList.add('open');
+}
+
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('open');
+}
+
+function lbNav(dir) {
+  lbIndex = (lbIndex + dir + lbImages.length) % lbImages.length;
+  document.getElementById('lb-img').src = '/images/' + lbImages[lbIndex];
+}
+
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') {
-    closeModal('add-modal');
-    closeModal('edit-modal');
-  }
+  if (e.key === 'Escape') { closeModal('add-modal'); closeModal('edit-modal'); closeLightbox(); }
+  if (e.key === 'ArrowLeft')  lbNav(-1);
+  if (e.key === 'ArrowRight') lbNav(1);
 });
 </script>
 @endsection

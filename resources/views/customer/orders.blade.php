@@ -90,6 +90,27 @@ img,canvas,svg{max-width:100%}
 .search-box input{border:none;outline:none;font-family:inherit;font-size:.82rem;color:#1a2e1a;background:transparent;width:140px}
 .rbtn{display:inline-flex;align-items:center;gap:.3rem;background:#f0fdf4;color:#166534;border:1.5px solid #bbf7d0;border-radius:8px;padding:.28rem .6rem;font-size:.72rem;font-weight:700;cursor:pointer;font-family:inherit;transition:all .15s;text-decoration:none;white-space:nowrap}
 .rbtn:hover{background:#dcfce7}
+/* REVIEWS */
+.review-section{margin-top:.9rem;border-top:1.5px dashed #d1fae5;padding-top:.8rem}
+.review-section h4{margin:0 0 .6rem;font-size:.82rem;color:#166534;font-weight:800;text-transform:uppercase;letter-spacing:.06em}
+.review-item{background:#f9fefb;border:1px solid #d1fae5;border-radius:10px;padding:.7rem .9rem;margin-bottom:.55rem}
+.review-item-name{font-size:.82rem;font-weight:700;color:#1a2e1a;margin-bottom:.45rem}
+.star-picker{display:flex;flex-direction:row-reverse;gap:.2rem;margin-bottom:.4rem;width:fit-content}
+.star-picker input[type=radio]{display:none}
+.star-picker label{font-size:1.3rem;cursor:pointer;color:#d1d5db;transition:color .12s;line-height:1}
+.star-picker label:hover,
+.star-picker label:hover ~ label,
+.star-picker input[type=radio]:checked ~ label,
+.star-picker input[type=radio]:checked + label{color:#f59e0b}
+.review-comment{width:100%;border:1.5px solid #d1fae5;border-radius:8px;padding:.45rem .7rem;font-family:inherit;font-size:.8rem;color:#1a2e1a;background:#fff;outline:none;resize:none;transition:border-color .18s;margin-bottom:.45rem}
+.review-comment:focus{border-color:#16a34a}
+.review-submit{display:inline-flex;align-items:center;gap:.3rem;background:#166534;color:#fff;border:none;border-radius:8px;padding:.35rem .85rem;font-size:.78rem;font-weight:700;cursor:pointer;font-family:inherit;transition:background .15s}
+.review-submit:hover{background:#14532d}
+.existing-review{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:.55rem .8rem;font-size:.8rem;color:#166534}
+.existing-stars{display:flex;gap:1px;margin-bottom:.2rem}
+.existing-stars span{font-size:.95rem}
+.star-on{color:#f59e0b}
+.star-off{color:#d1d5db}
 
 @media (max-width: 900px){
   .nav{height:auto;padding:.75rem 1rem;flex-wrap:wrap;gap:.6rem}
@@ -252,6 +273,48 @@ img,canvas,svg{max-width:100%}
       </div>
       @endforeach
       <div class="itotal-row"><span>Total</span><span>&#8369;{{ number_format($order->total_amount,2) }}</span></div>
+
+      @if($order->status === 'delivered')
+      <div class="review-section">
+        <h4>⭐ Rate Your Order</h4>
+        @foreach($order->items as $item)
+          @if(!$item->product) @continue @endif
+          @php $existingReview = $reviewMap[$order->id][$item->product_id] ?? null; @endphp
+          <div class="review-item">
+            <div class="review-item-name">{{ $item->product->name }}</div>
+            @if($existingReview)
+              <div class="existing-review">
+                <div class="existing-stars">
+                  @for($s=1;$s<=5;$s++)
+                    <span class="{{ $s <= $existingReview->rating ? 'star-on' : 'star-off' }}">★</span>
+                  @endfor
+                </div>
+                @if($existingReview->comment)
+                  <div style="margin-top:.2rem;color:#1a2e1a;font-size:.78rem">&ldquo;{{ $existingReview->comment }}&rdquo;</div>
+                @endif
+              </div>
+            @else
+              <form method="POST" action="{{ route('customer.reviews.store') }}">
+                @csrf
+                <input type="hidden" name="order_id" value="{{ $order->id }}">
+                <input type="hidden" name="product_id" value="{{ $item->product_id }}">
+                <div class="star-picker" id="stars-{{ $order->id }}-{{ $item->product_id }}">
+                  @for($s=5;$s>=1;$s--)
+                    <input type="radio" name="rating" id="r{{ $order->id }}-{{ $item->product_id }}-{{ $s }}" value="{{ $s }}" required>
+                    <label for="r{{ $order->id }}-{{ $item->product_id }}-{{ $s }}">★</label>
+                  @endfor
+                </div>
+                <textarea name="comment" class="review-comment" rows="2" placeholder="Optional comment..."></textarea>
+                <button type="submit" class="review-submit">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                  Submit Review
+                </button>
+              </form>
+            @endif
+          </div>
+        @endforeach
+      </div>
+      @endif
 
       @if($order->payment_method || $order->payment_status || $order->payment_reference)
       <div class="note-box" style="background:#f0fdf4;border-color:#bbf7d0;color:#166534;">
