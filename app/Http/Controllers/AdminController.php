@@ -6,6 +6,7 @@ use App\Models\Order;
 use App\Models\OrderAudit;
 use App\Models\OrderItem;
 use App\Models\Product;
+use App\Models\ProductImage;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -73,8 +74,9 @@ class AdminController extends Controller
         $search   = $request->query('q');
         $day      = $request->query('day', 'all');
         $category = $request->query('category', 'all');
+        $lowStockThreshold = (int) config('greenorder.low_stock_threshold', 10);
 
-        $query = Product::query();
+        $query = Product::with('images')->withCount('reviews')->withAvg('reviews', 'rating');
 
         if ($search) {
             $query->where(function ($q) use ($search) {
@@ -99,7 +101,7 @@ class AdminController extends Controller
             ->orderBy('category')
             ->pluck('category');
 
-        return view('admin.products', compact('products', 'categories', 'search', 'day', 'category'));
+        return view('admin.products', compact('products', 'categories', 'search', 'day', 'category', 'lowStockThreshold'));
     }
 
     public function storeProduct(Request $request)
@@ -112,6 +114,7 @@ class AdminController extends Controller
             'stock'            => 'required|integer|min:0',
             'day_availability' => 'required|in:common,monday,tuesday,wednesday,thursday,friday,saturday',
             'image'            => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
+            'gallery.*'        => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
         ]);
 
         if ($request->hasFile('image')) {
@@ -120,7 +123,16 @@ class AdminController extends Controller
             $validated['image'] = 'products/' . $filename;
         }
 
-        Product::create($validated);
+        $product = Product::create($validated);
+
+        if ($request->hasFile('gallery')) {
+            foreach ($request->file('gallery') as $i => $file) {
+                $filename = $file->hashName();
+                $file->move(public_path('images/products'), $filename);
+                $product->images()->create(['path' => 'products/' . $filename, 'sort_order' => $i]);
+            }
+        }
+
         return back()->with('success', 'Product added successfully.');
     }
 
@@ -129,10 +141,14 @@ class AdminController extends Controller
         $validated = $request->validate([
             'name'             => 'required|string|max:100',
             'category'         => 'nullable|string|max:50',
+            'description'      => 'nullable|string|max:500',
             'price'            => 'required|numeric|min:0',
             'stock'            => 'required|integer|min:0',
             'day_availability' => 'required|in:common,monday,tuesday,wednesday,thursday,friday,saturday',
             'image'            => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
+            'gallery.*'        => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
+            'remove_images'    => 'nullable|array',
+            'remove_images.*'  => 'integer',
         ]);
 
         if ($request->hasFile('image')) {
@@ -143,14 +159,51 @@ class AdminController extends Controller
         }
 
         $product->update($validated);
+
+        // Remove selected gallery images
+        if ($request->filled('remove_images')) {
+            $toRemove = ProductImage::whereIn('id', $request->remove_images)
+                ->where('product_id', $product->id)->get();
+            foreach ($toRemove as $img) {
+                @unlink(public_path('images/' . $img->path));
+                $img->delete();
+            }
+        }
+
+        // Add new gallery images
+        if ($request->hasFile('gallery')) {
+            $nextOrder = $product->images()->max('sort_order') + 1;
+            foreach ($request->file('gallery') as $i => $file) {
+                $filename = $file->hashName();
+                $file->move(public_path('images/products'), $filename);
+                $product->images()->create(['path' => 'products/' . $filename, 'sort_order' => $nextOrder + $i]);
+            }
+        }
+
         return back()->with('success', 'Product updated.');
     }
 
     public function destroyProduct(Product $product)
     {
         if ($product->image) @unlink(public_path('images/' . $product->image));
+        foreach ($product->images as $img) {
+            @unlink(public_path('images/' . $img->path));
+        }
         $product->delete();
         return back()->with('success', 'Product deleted.');
+    }
+
+    public function bulkToggle(Request $request)
+    {
+        $request->validate([
+            'ids'    => 'required|array',
+            'ids.*'  => 'integer',
+            'action' => 'required|in:enable,disable',
+        ]);
+        Product::whereIn('id', $request->ids)
+            ->update(['is_available' => $request->action === 'enable']);
+        $count = count($request->ids);
+        return back()->with('success', $count . ' product(s) ' . ($request->action === 'enable' ? 'enabled' : 'disabled') . '.');
     }
 
     // ── Orders ────────────────────────────────────────────────────────────────
@@ -283,5 +336,57 @@ class AdminController extends Controller
     public function profile()
     {
         return view('admin.profile');
+    }
+
+    public function exportOrders(Request $request)
+    {
+        $status = $request->query('status', 'all');
+        $from   = $request->query('from');
+        $to     = $request->query('to');
+
+        $query = Order::with(['user', 'items.product'])->latest();
+
+        if ($status !== 'all') {
+            $query->where('status', $status);
+        }
+        if ($from) {
+            $query->whereDate('created_at', '>=', $from);
+        }
+        if ($to) {
+            $query->whereDate('created_at', '<=', $to);
+        }
+
+        $orders = $query->get();
+        $filename = 'orders-' . now()->format('Y-m-d') . '.csv';
+
+        $headers = [
+            'Content-Type'        => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+        ];
+
+        $callback = function () use ($orders) {
+            $handle = fopen('php://output', 'w');
+            fputcsv($handle, ['Order #', 'Customer', 'Email', 'Mobile', 'Type', 'Items', 'Total (PHP)', 'Payment Method', 'Payment Status', 'Order Status', 'Notes', 'Date']);
+            foreach ($orders as $order) {
+                $items = $order->items->map(fn($i) => ($i->quantity . 'x ' . ($i->product?->name ?? 'Deleted')))->join('; ');
+                fputcsv($handle, [
+                    str_pad($order->id, 4, '0', STR_PAD_LEFT),
+                    $order->user?->name ?? 'N/A',
+                    $order->user?->email ?? 'N/A',
+                    $order->user?->mobile ?? 'N/A',
+                    $order->order_type === 'dine_in' ? 'Dine In' : 'Takeout',
+                    $items,
+                    number_format($order->total_amount, 2),
+                    $order->payment_method ?? 'N/A',
+                    $order->payment_status ?? 'N/A',
+                    ucfirst($order->status),
+                    $order->notes ?? '',
+                    $order->created_at->format('Y-m-d H:i:s'),
+                ]);
+            }
+            fclose($handle);
+        };
+
+        return response()->stream($callback, 200, $headers);
     }
 }

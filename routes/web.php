@@ -26,6 +26,7 @@ Route::middleware('auth')->put('/profile/password', [ProfileController::class, '
 // Customer
 Route::middleware(['auth', 'role:user'])->prefix('customer')->group(function () {
     Route::get('/home',           [CustomerController::class, 'home'])->name('customer.home');
+    Route::get('/products',        [CustomerController::class, 'productsJson'])->name('customer.products.json');
     Route::post('/checkout',      [CustomerController::class, 'checkout'])->name('customer.checkout');
     Route::get('/payment',        [CustomerController::class, 'showPayment'])->name('customer.payment');
     Route::post('/pay',           [CustomerController::class, 'pay'])->name('customer.pay');
@@ -34,6 +35,10 @@ Route::middleware(['auth', 'role:user'])->prefix('customer')->group(function () 
     Route::get('/orders/{order}', [CustomerController::class, 'orderDetail'])->name('customer.order.detail');
     Route::patch('/orders/{order}/cancel', [CustomerController::class, 'cancelOrder'])->name('customer.orders.cancel');
     Route::get('/orders/{order}/receipt',  [CustomerController::class, 'orderReceipt'])->name('customer.orders.receipt');
+    Route::get('/orders/{order}/retry',    [CustomerController::class, 'retryPayment'])->name('customer.orders.retry');
+    Route::post('/reviews',                [CustomerController::class, 'storeReview'])->name('customer.reviews.store');
+    Route::post('/wishlist/{product}',     [CustomerController::class, 'toggleWishlist'])->name('customer.wishlist.toggle');
+    Route::get('/order-statuses',          [CustomerController::class, 'activeOrderStatuses'])->name('customer.order.statuses');
     Route::get('/profile',        [ProfileController::class, 'customerProfile'])->name('customer.profile');
 });
 
@@ -42,11 +47,13 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->group(function () {
     Route::get('/dashboard',             [AdminController::class, 'dashboard'])->name('admin.dashboard');
     Route::get('/products',              [AdminController::class, 'products'])->name('admin.products');
     Route::post('/products',             [AdminController::class, 'storeProduct'])->name('admin.products.store');
+    Route::post('/products/bulk-toggle', [AdminController::class, 'bulkToggle'])->name('admin.products.bulk-toggle');
     Route::put('/products/{product}',    [AdminController::class, 'updateProduct'])->name('admin.products.update');
     Route::delete('/products/{product}', [AdminController::class, 'destroyProduct'])->name('admin.products.destroy');
     Route::get('/customers',             [AdminController::class, 'customers'])->name('admin.customers');
     Route::get('/orders',                [AdminController::class, 'orders'])->name('admin.orders');
     Route::patch('/orders/{order}/status', [AdminController::class, 'updateOrderStatus'])->name('admin.orders.status');
+    Route::get('/orders/export',          [AdminController::class, 'exportOrders'])->name('admin.orders.export');
     Route::get('/reports',               [AdminController::class, 'reports'])->name('admin.reports');
     Route::get('/profile',               [ProfileController::class, 'adminProfile'])->name('admin.profile');
 });
