@@ -320,14 +320,41 @@ class CustomerController extends Controller
         return redirect()->route('customer.orders')->with('success', $message);
     }
 
-    public function myOrders()
+    public function myOrders(Request $request)
     {
-        $orders = Order::with(['items.product', 'audits'])
-            ->where('user_id', Auth::id())
-            ->latest()
-            ->paginate(10);
+        $status = $request->query('status', 'all');
+        $search = $request->query('q');
 
-        return view('customer.orders', compact('orders'));
+        $query = Order::with(['items.product', 'audits'])
+            ->where('user_id', Auth::id())
+            ->latest();
+
+        if ($status !== 'all') {
+            $query->where('status', $status);
+        }
+
+        if ($search) {
+            $query->where('id', 'like', '%' . ltrim($search, '#0') . '%');
+        }
+
+        $orders = $query->paginate(10)->appends($request->query());
+
+        $counts = [
+            'all'        => Order::where('user_id', Auth::id())->count(),
+            'pending'    => Order::where('user_id', Auth::id())->where('status', 'pending')->count(),
+            'processing' => Order::where('user_id', Auth::id())->where('status', 'processing')->count(),
+            'delivered'  => Order::where('user_id', Auth::id())->where('status', 'delivered')->count(),
+            'cancelled'  => Order::where('user_id', Auth::id())->where('status', 'cancelled')->count(),
+        ];
+
+        return view('customer.orders', compact('orders', 'status', 'search', 'counts'));
+    }
+
+    public function orderReceipt(Order $order)
+    {
+        abort_if($order->user_id !== Auth::id(), 403);
+        $order->load('items.product', 'user');
+        return view('customer.receipt', compact('order'));
     }
 
     public function orderDetail(Order $order)

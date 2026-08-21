@@ -33,6 +33,7 @@ Route::middleware(['auth', 'role:user'])->prefix('customer')->group(function () 
     Route::get('/orders',         [CustomerController::class, 'myOrders'])->name('customer.orders');
     Route::get('/orders/{order}', [CustomerController::class, 'orderDetail'])->name('customer.order.detail');
     Route::patch('/orders/{order}/cancel', [CustomerController::class, 'cancelOrder'])->name('customer.orders.cancel');
+    Route::get('/orders/{order}/receipt',  [CustomerController::class, 'orderReceipt'])->name('customer.orders.receipt');
     Route::get('/profile',        [ProfileController::class, 'customerProfile'])->name('customer.profile');
 });
 
