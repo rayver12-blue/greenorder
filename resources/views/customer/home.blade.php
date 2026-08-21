@@ -47,9 +47,18 @@ img,canvas,svg{max-width:100%}
 .bs{display:grid;grid-template-columns:repeat(3,1fr);gap:.9rem;margin-bottom:1.5rem}
 @media(max-width:680px){.bs{grid-template-columns:1fr 1fr}}
 /* SEARCH */
-.sb{display:flex;align-items:center;background:#fff;border:1.5px solid #d1fae5;border-radius:50px;padding:.5rem 1.1rem;gap:.6rem;margin-bottom:1rem;transition:border-color .2s,box-shadow .2s}
+.sb{display:flex;align-items:center;background:#fff;border:1.5px solid #d1fae5;border-radius:50px;padding:.5rem 1.1rem;gap:.6rem;margin-bottom:.65rem;transition:border-color .2s,box-shadow .2s}
 .sb:focus-within{border-color:#16a34a;box-shadow:0 0 0 3px rgba(22,163,74,.1)}
 .sb input{border:none;outline:none;font-family:inherit;font-size:.87rem;color:#1a2e1a;flex:1;background:transparent}
+/* FILTER ROW */
+.frow{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;margin-bottom:1rem}
+.fcat{padding:.3rem .75rem;border-radius:20px;font-size:.76rem;font-weight:700;border:1.5px solid #e5e7eb;background:#fff;color:#9ca3af;cursor:pointer;font-family:inherit;transition:all .15s;white-space:nowrap}
+.fcat.active{background:#166534;color:#fff;border-color:#166534}
+.fcat:hover:not(.active){border-color:#16a34a;color:#166534}
+.fprice{display:flex;align-items:center;gap:.35rem;margin-left:auto}
+.fprice label{font-size:.74rem;color:#5a7a5a;font-weight:600;white-space:nowrap}
+.fprice input[type=range]{accent-color:#16a34a;width:90px;cursor:pointer}
+.fprice span{font-size:.74rem;font-weight:700;color:#166534;min-width:52px}
 /* BANNER */
 .banner{border-radius:12px;padding:.75rem 1rem;margin-bottom:1rem;display:flex;align-items:center;gap:.55rem;font-size:.82rem;font-weight:600;line-height:1.45}
 .banner strong{min-width:0}
@@ -81,6 +90,10 @@ img,canvas,svg{max-width:100%}
 .addbtn{background:#166534;color:#fff;border:none;border-radius:8px;padding:.28rem .65rem;font-size:.72rem;font-weight:700;cursor:pointer;font-family:inherit;transition:background .15s;white-space:nowrap}
 .addbtn:hover{background:#14532d}
 .addbtn:disabled{background:#e5e7eb;color:#9ca3af;cursor:not-allowed}
+/* WISHLIST */
+.wbtn{background:none;border:none;cursor:pointer;padding:.18rem .3rem;line-height:1;transition:transform .15s;flex-shrink:0}
+.wbtn:hover{transform:scale(1.2)}
+.wbtn svg{display:block}
 .empty-sec{text-align:center;padding:2.25rem;color:#9ca3af;background:#fff;border-radius:14px;border:1.5px dashed #d1fae5}
 .empty-sec svg{opacity:.3;margin-bottom:.5rem}
 /* CART DRAWER */
@@ -315,6 +328,19 @@ img,canvas,svg{max-width:100%}
     <input type="text" id="srch" placeholder="Search dishes, meals...">
   </div>
 
+  {{-- FILTERS --}}
+  <div class="frow">
+    <button class="fcat active" data-cat="all" onclick="setCategory('all')">All</button>
+    @foreach($categories as $cat)
+      <button class="fcat" data-cat="{{ strtolower($cat) }}" onclick="setCategory('{{ strtolower($cat) }}')">{{ ucfirst($cat) }}</button>
+    @endforeach
+    <div class="fprice">
+      <label for="price-range">Max:</label>
+      <input type="range" id="price-range" min="0" max="1000" step="10" value="1000" oninput="setPriceMax(this.value)">
+      <span id="price-label">₱1000</span>
+    </div>
+  </div>
+
   {{-- BANNER --}}
   @if($todayKey === 'sunday')
   <div class="banner banner-orange">
@@ -349,7 +375,7 @@ img,canvas,svg{max-width:100%}
       @if($dp->count())
         <div class="pg">
           @foreach($dp as $p)
-          <div class="pc" data-name="{{ strtolower($p->name) }}">
+          <div class="pc" data-name="{{ strtolower($p->name) }}" data-price="{{ $p->price }}" data-category="{{ strtolower($p->category ?? '') }}">
             <img src="{{ $p->image ? asset('images/' . $p->image) : asset('images/food-placeholder.svg') }}" alt="{{ $p->name }}">
           <div class="pc-b">
             <div class="pc-n">{{ $p->name }}</div>
@@ -363,6 +389,9 @@ img,canvas,svg{max-width:100%}
             </div>
             <div class="pc-f">
               <div class="pc-p">₱{{ number_format($p->price,2) }}</div>
+              <button class="wbtn" onclick="toggleWishlist({{ $p->id }}, this)" title="Wishlist" data-wishlisted="{{ in_array($p->id, $wishlistIds) ? '1' : '0' }}">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" stroke="#ef4444" stroke-width="2" fill="{{ in_array($p->id, $wishlistIds) ? '#ef4444' : 'none' }}"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+              </button>
               <button class="addbtn" onclick="addToCart({{ $p->id }},'{{ addslashes($p->name) }}',{{ $p->price }}, {{ $p->stock ?? 0 }})" {{ ($p->stock ?? 0) <= 0 ? 'disabled' : '' }}>+ Add</button>
             </div>
           </div>
@@ -442,16 +471,51 @@ document.addEventListener('DOMContentLoaded', () => {
   const def = ALLOWED.includes(TODAY) ? TODAY : 'common';
   switchTab(def);
 
-  document.getElementById('srch').addEventListener('input', function(){
-    const q = this.value.toLowerCase().trim();
-    document.querySelectorAll('.pc[data-name]').forEach(c => {
-      c.style.display = (!q || c.dataset.name.includes(q)) ? '' : 'none';
-    });
-  });
+  document.getElementById('srch').addEventListener('input', applyFilters);
 
   loadCart();
   renderCart();
 });
+
+// ── Filters ──────────────────────────────────────────────────────────────────
+let activeCategory = 'all';
+let maxPrice = 1000;
+
+function setCategory(cat) {
+  activeCategory = cat;
+  document.querySelectorAll('.fcat').forEach(b => b.classList.toggle('active', b.dataset.cat === cat));
+  applyFilters();
+}
+
+function setPriceMax(val) {
+  maxPrice = parseFloat(val);
+  document.getElementById('price-label').textContent = '\u20b1' + maxPrice;
+  applyFilters();
+}
+
+function applyFilters() {
+  const q = document.getElementById('srch').value.toLowerCase().trim();
+  document.querySelectorAll('.pc[data-name]').forEach(card => {
+    const nameMatch  = !q || card.dataset.name.includes(q);
+    const catMatch   = activeCategory === 'all' || card.dataset.category === activeCategory;
+    const priceMatch = parseFloat(card.dataset.price || 0) <= maxPrice;
+    card.style.display = (nameMatch && catMatch && priceMatch) ? '' : 'none';
+  });
+}
+
+// ── Wishlist ──────────────────────────────────────────────────────────────────
+const WISHLIST_URL = '{{ route("customer.wishlist.toggle", ["product" => "__ID__"]) }}';
+const CSRF = document.querySelector('meta[name=csrf-token]')?.content || '{{ csrf_token() }}';
+
+function toggleWishlist(id, btn) {
+  const url = WISHLIST_URL.replace('__ID__', id);
+  fetch(url, { method: 'POST', headers: { 'X-CSRF-TOKEN': CSRF, 'Accept': 'application/json' } })
+    .then(r => r.json())
+    .then(data => {
+      btn.dataset.wishlisted = data.wishlisted ? '1' : '0';
+      btn.querySelector('svg').setAttribute('fill', data.wishlisted ? '#ef4444' : 'none');
+    });
+}
 
 // â”€â”€ Cart â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 let cartItems = [];

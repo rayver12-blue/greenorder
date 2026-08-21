@@ -198,7 +198,7 @@ img,canvas,svg{max-width:100%}
         @if($order->payment_status)
           <span class="sp" style="background:#ecfeff;color:#0f766e;border:1px solid #a5f3fc;">{{ $order->payment_status }}</span>
         @endif
-        <span class="sp sp-{{ $order->status }}">
+        <span class="sp sp-{{ $order->status }}" id="status-pill-{{ $order->id }}">
           @if($order->status==='pending') Placed
           @elseif($order->status==='processing') Preparing
           @elseif($order->status==='delivered') Done
@@ -225,7 +225,7 @@ img,canvas,svg{max-width:100%}
       @if($cancelled)
         <div class="cancel-box">This order was cancelled.</div>
       @else
-        <div class="prog">
+        <div class="prog" id="prog-{{ $order->id }}">
           @foreach($steps as $i => $step)
             @php $done = ($si !== false && $i < $si); $cur = ($si !== false && $i === $si); @endphp
             <div class="ps">
@@ -348,6 +348,46 @@ document.addEventListener('DOMContentLoaded', () => {
   @if(session('success'))
   localStorage.removeItem(CART_KEY);
   @endif
+
+  // Live order status polling (every 10s for active orders)
+  const STATUS_URL = '{{ route("customer.order.statuses") }}';
+  const STATUS_LABELS = { pending: 'Placed', processing: 'Preparing', delivered: 'Done', cancelled: 'Cancelled' };
+  const STATUS_CLASSES = { pending: 'sp-pending', processing: 'sp-processing', delivered: 'sp-delivered', cancelled: 'sp-cancelled' };
+  const STEPS = ['pending', 'processing', 'delivered'];
+  const STEP_LABELS = ['Order Placed', 'Preparing', 'Completed'];
+
+  function pollStatuses() {
+    fetch(STATUS_URL, { headers: { 'Accept': 'application/json' } })
+      .then(r => r.json())
+      .then(data => {
+        Object.entries(data).forEach(([id, status]) => {
+          // Update status pill
+          const pill = document.querySelector(`#status-pill-${id}`);
+          if (pill) {
+            pill.className = 'sp ' + (STATUS_CLASSES[status] || '');
+            pill.textContent = STATUS_LABELS[status] || status;
+          }
+          // Update progress bar
+          const si = STEPS.indexOf(status);
+          document.querySelectorAll(`#prog-${id} .pcirc`).forEach((circ, i) => {
+            circ.className = 'pcirc' + (i < si ? ' done' : (i === si ? ' cur' : ''));
+            circ.innerHTML = i < si
+              ? '<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>'
+              : (i + 1);
+          });
+          document.querySelectorAll(`#prog-${id} .pline`).forEach((line, i) => {
+            line.className = 'pline' + (i < si ? ' done' : '');
+          });
+          document.querySelectorAll(`#prog-${id} .plbl`).forEach((lbl, i) => {
+            lbl.className = 'plbl' + (i < si ? ' done' : (i === si ? ' cur' : ''));
+          });
+        });
+      })
+      .catch(() => {});
+  }
+
+  const hasActive = document.querySelector('.sp-pending, .sp-processing');
+  if (hasActive) setInterval(pollStatuses, 10000);
 });
 </script>
 @endsection

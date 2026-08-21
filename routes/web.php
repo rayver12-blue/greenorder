@@ -34,6 +34,10 @@ Route::middleware(['auth', 'role:user'])->prefix('customer')->group(function () 
     Route::get('/orders/{order}', [CustomerController::class, 'orderDetail'])->name('customer.order.detail');
     Route::patch('/orders/{order}/cancel', [CustomerController::class, 'cancelOrder'])->name('customer.orders.cancel');
     Route::get('/orders/{order}/receipt',  [CustomerController::class, 'orderReceipt'])->name('customer.orders.receipt');
+    Route::post('/reviews',                [CustomerController::class, 'storeReview'])->name('customer.reviews.store');
+    Route::delete('/reviews/{review}',     [CustomerController::class, 'destroyReview'])->name('customer.reviews.destroy');
+    Route::post('/wishlist/{product}',     [CustomerController::class, 'toggleWishlist'])->name('customer.wishlist.toggle');
+    Route::get('/order-statuses',          [CustomerController::class, 'activeOrderStatuses'])->name('customer.order.statuses');
     Route::get('/profile',        [ProfileController::class, 'customerProfile'])->name('customer.profile');
 });
 

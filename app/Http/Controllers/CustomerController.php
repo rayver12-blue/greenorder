@@ -6,6 +6,7 @@ use App\Models\Order;
 use App\Models\OrderAudit;
 use App\Models\PaymentTransaction;
 use App\Models\Product;
+use App\Models\Wishlist;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -17,7 +18,9 @@ class CustomerController extends Controller
     {
         $products    = Product::all();
         $bestSellers = Product::orderByDesc('sold_count')->limit(3)->get();
-        return view('customer.home', compact('products', 'bestSellers'));
+        $wishlistIds = Wishlist::where('user_id', Auth::id())->pluck('product_id')->toArray();
+        $categories  = $products->pluck('category')->filter()->unique()->sort()->values();
+        return view('customer.home', compact('products', 'bestSellers', 'wishlistIds', 'categories'));
     }
 
     public function checkout(Request $request)
@@ -362,6 +365,27 @@ class CustomerController extends Controller
         abort_if($order->user_id !== Auth::id(), 403);
         $order->load('items.product');
         return view('customer.order-detail', compact('order'));
+    }
+
+    public function toggleWishlist(Request $request, Product $product)
+    {
+        $existing = Wishlist::where('user_id', Auth::id())->where('product_id', $product->id)->first();
+        if ($existing) {
+            $existing->delete();
+            $wishlisted = false;
+        } else {
+            Wishlist::create(['user_id' => Auth::id(), 'product_id' => $product->id]);
+            $wishlisted = true;
+        }
+        return response()->json(['wishlisted' => $wishlisted]);
+    }
+
+    public function activeOrderStatuses()
+    {
+        $orders = Order::where('user_id', Auth::id())
+            ->whereIn('status', ['pending', 'processing'])
+            ->get(['id', 'status']);
+        return response()->json($orders->mapWithKeys(fn($o) => [$o->id => $o->status]));
     }
 
     public function cancelOrder(Request $request, Order $order)
