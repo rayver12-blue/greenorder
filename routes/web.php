@@ -35,6 +35,7 @@ Route::middleware(['auth', 'role:user'])->prefix('customer')->group(function () 
     Route::get('/orders/{order}', [CustomerController::class, 'orderDetail'])->name('customer.order.detail');
     Route::patch('/orders/{order}/cancel', [CustomerController::class, 'cancelOrder'])->name('customer.orders.cancel');
     Route::get('/orders/{order}/receipt',  [CustomerController::class, 'orderReceipt'])->name('customer.orders.receipt');
+    Route::get('/orders/{order}/retry',    [CustomerController::class, 'retryPayment'])->name('customer.orders.retry');
     Route::post('/reviews',                [CustomerController::class, 'storeReview'])->name('customer.reviews.store');
     Route::post('/wishlist/{product}',     [CustomerController::class, 'toggleWishlist'])->name('customer.wishlist.toggle');
     Route::get('/order-statuses',          [CustomerController::class, 'activeOrderStatuses'])->name('customer.order.statuses');
@@ -52,6 +53,7 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->group(function () {
     Route::get('/customers',             [AdminController::class, 'customers'])->name('admin.customers');
     Route::get('/orders',                [AdminController::class, 'orders'])->name('admin.orders');
     Route::patch('/orders/{order}/status', [AdminController::class, 'updateOrderStatus'])->name('admin.orders.status');
+    Route::get('/orders/export',          [AdminController::class, 'exportOrders'])->name('admin.orders.export');
     Route::get('/reports',               [AdminController::class, 'reports'])->name('admin.reports');
     Route::get('/profile',               [ProfileController::class, 'adminProfile'])->name('admin.profile');
 });

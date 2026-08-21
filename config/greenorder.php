@@ -15,4 +15,13 @@ return [
     | Change this in your .env file:  ADMIN_KEY=your_secret_key_here
     */
     'admin_key' => env('ADMIN_KEY', 'GREENORDER_ADMIN_2024'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Low Stock Alert Threshold
+    |--------------------------------------------------------------------------
+    | Admin inventory rows will be highlighted when stock is at or below this
+    | value so reordering can be done before products run out.
+    */
+    'low_stock_threshold' => env('LOW_STOCK_THRESHOLD', 10),
 ];

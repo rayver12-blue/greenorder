@@ -462,6 +462,8 @@ class CustomerController extends Controller
             return back()->with('error', 'Only pending or processing orders can be cancelled.');
         }
 
+        $request->validate(['reason' => ['required', 'string', 'min:5', 'max:300']]);
+
         DB::transaction(function () use ($order) {
             $order->update(['status' => 'cancelled']);
             $order->load('items.product');
@@ -479,9 +481,34 @@ class CustomerController extends Controller
             'actor_id'   => $order->user_id,
             'actor_role' => 'user',
             'action'     => 'cancelled',
-            'message'    => 'Order cancelled by customer.',
+            'message'    => 'Order cancelled by customer. Reason: ' . trim($request->reason),
         ]);
 
         return back()->with('success', 'Order #' . str_pad($order->id, 4, '0', STR_PAD_LEFT) . ' has been cancelled.');
+    }
+
+    public function retryPayment(Order $order)
+    {
+        abort_if($order->user_id !== Auth::id(), 403);
+        abort_if(!in_array($order->payment_status, ['Pending', 'COD - Payment Pending'], true), 403);
+        abort_if($order->status === 'cancelled', 403);
+
+        $order->load('items.product');
+        $items = $order->items->map(fn($i) => [
+            'id'    => $i->product_id,
+            'name'  => $i->product?->name ?? 'Item',
+            'price' => (float) $i->unit_price,
+            'qty'   => $i->quantity,
+        ])->toArray();
+
+        session()->put('checkout.order', [
+            'items'      => $items,
+            'total'      => (float) $order->total_amount,
+            'order_type' => $order->order_type,
+            'notes'      => $order->notes,
+            'retry_order_id' => $order->id,
+        ]);
+
+        return redirect()->route('customer.payment');
     }
 }

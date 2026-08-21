@@ -65,8 +65,20 @@ img,canvas,svg{max-width:100%}
 .itotal-row span:last-child{color:#166534}
 /* NOTES */
 .note-box{background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:.5rem .8rem;font-size:.78rem;color:#92400e;margin-top:.6rem;display:flex;align-items:center;gap:.4rem}
-/* CANCEL NOTICE */
-.cancel-box{background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:.5rem .8rem;font-size:.8rem;color:#dc2626;font-weight:600;margin-bottom:.75rem}
+/* CANCEL MODAL */
+.mover{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:400;display:flex;align-items:center;justify-content:center;padding:1rem;opacity:0;pointer-events:none;transition:opacity .2s}
+.mover.open{opacity:1;pointer-events:all}
+.mbox{background:#fff;border-radius:14px;max-width:420px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,.15);transform:translateY(14px);transition:transform .2s}
+.mover.open .mbox{transform:none}
+.mhd{padding:.9rem 1.1rem;border-bottom:1px solid #f0fdf4;display:flex;justify-content:space-between;align-items:center}
+.mhd h3{font-weight:800;font-size:.95rem;color:#1a2e1a;margin:0}
+.mc-btn{background:none;border:none;cursor:pointer;color:#9ca3af;font-size:1.3rem;line-height:1;padding:0}
+.mbody{padding:1rem 1.1rem}
+.mfoot{padding:.8rem 1.1rem;border-top:1px solid #f0fdf4;display:flex;justify-content:flex-end;gap:.5rem}
+.reason-inp{width:100%;border:1.5px solid #d1fae5;border-radius:8px;padding:.5rem .75rem;font-family:inherit;font-size:.83rem;color:#1a2e1a;background:#f9fefb;outline:none;resize:none;transition:border-color .18s;box-sizing:border-box}
+.reason-inp:focus{border-color:#16a34a}
+.btn-cancel-modal{background:#f5f5f0;color:#5a7a5a;border:1.5px solid #e5e7eb;border-radius:8px;padding:.45rem .9rem;font-family:inherit;font-size:.82rem;font-weight:700;cursor:pointer}
+.btn-confirm-cancel{background:#dc2626;color:#fff;border:none;border-radius:8px;padding:.45rem .9rem;font-family:inherit;font-size:.82rem;font-weight:700;cursor:pointer}
 /* AUDIT LOGS */
 .alog{margin-top:.8rem;border-top:1.5px dashed #f0fdf4;padding-top:.7rem}
 .alog h4{margin:0 0 .5rem;font-size:.82rem;color:#5a7a5a;text-transform:uppercase;letter-spacing:.08em}
@@ -234,17 +246,20 @@ img,canvas,svg{max-width:100%}
           Reorder
         </button>
         @if(in_array($order->status, ['pending','processing'], true))
-          <form method="POST" action="{{ route('customer.orders.cancel', $order) }}" onsubmit="return confirm('Cancel this order?');" onclick="event.stopPropagation();">
-            @csrf @method('PATCH')
-            <button type="submit" class="cbtn">Cancel</button>
-          </form>
+          <button class="cbtn" onclick="event.stopPropagation();openCancelModal({{ $order->id }})">Cancel</button>
+        @endif
+        @if(in_array($order->payment_status ?? '', ['Pending','COD - Payment Pending'], true) && $order->status !== 'cancelled')
+          <a href="{{ route('customer.orders.retry', $order) }}" class="rbtn" style="background:#fff7ed;color:#9a3412;border-color:#fed7aa" onclick="event.stopPropagation()">
+            <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.5"/></svg>
+            Retry Payment
+          </a>
         @endif
         <svg class="chev" id="chev-{{ $order->id }}" xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
       </div>
     </div>
     <div class="ocb" id="body-{{ $order->id }}">
       @if($cancelled)
-        <div class="cancel-box">This order was cancelled.</div>
+        <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:.5rem .8rem;font-size:.8rem;color:#dc2626;font-weight:600;margin-bottom:.75rem">This order was cancelled.</div>
       @else
         <div class="prog" id="prog-{{ $order->id }}">
           @foreach($steps as $i => $step)
@@ -374,6 +389,26 @@ img,canvas,svg{max-width:100%}
   @endif
 </div>
 
+<div class="mover" id="cancel-modal" onclick="if(event.target===this)closeCancelModal()">
+  <div class="mbox">
+    <div class="mhd">
+      <h3>Cancel Order</h3>
+      <button class="mc-btn" onclick="closeCancelModal()">&#x2715;</button>
+    </div>
+    <form method="POST" id="cancel-form">
+      @csrf @method('PATCH')
+      <div class="mbody">
+        <p style="font-size:.83rem;color:#5a7a5a;margin:0 0 .75rem">Please tell us why you're cancelling this order.</p>
+        <textarea name="reason" class="reason-inp" rows="3" placeholder="e.g. Changed my mind, ordered by mistake..." required minlength="5" maxlength="300"></textarea>
+      </div>
+      <div class="mfoot">
+        <button type="button" class="btn-cancel-modal" onclick="closeCancelModal()">Keep Order</button>
+        <button type="submit" class="btn-confirm-cancel">Confirm Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <script>
 const CART_KEY = 'greenorder_cart_v1_user_{{ auth()->id() }}';
 
@@ -382,6 +417,16 @@ function toggle(id) {
   const c = document.getElementById('chev-'+id);
   const show = b.classList.toggle('show');
   c.classList.toggle('open', show);
+}
+
+function openCancelModal(orderId) {
+  const base = '{{ rtrim(url("customer/orders"), "/") }}/';
+  document.getElementById('cancel-form').action = base + orderId + '/cancel';
+  document.getElementById('cancel-form').querySelector('textarea').value = '';
+  document.getElementById('cancel-modal').classList.add('open');
+}
+function closeCancelModal() {
+  document.getElementById('cancel-modal').classList.remove('open');
 }
 
 function reorder(items) {
@@ -412,31 +457,27 @@ document.addEventListener('DOMContentLoaded', () => {
   localStorage.removeItem(CART_KEY);
   @endif
 
-  // Live order status polling (every 10s for active orders)
+  document.addEventListener('keydown', e => { if(e.key==='Escape') closeCancelModal(); });
+
   const STATUS_URL = '{{ route("customer.order.statuses") }}';
   const STATUS_LABELS = { pending: 'Placed', processing: 'Preparing', delivered: 'Done', cancelled: 'Cancelled' };
   const STATUS_CLASSES = { pending: 'sp-pending', processing: 'sp-processing', delivered: 'sp-delivered', cancelled: 'sp-cancelled' };
   const STEPS = ['pending', 'processing', 'delivered'];
-  const STEP_LABELS = ['Order Placed', 'Preparing', 'Completed'];
 
   function pollStatuses() {
     fetch(STATUS_URL, { headers: { 'Accept': 'application/json' } })
       .then(r => r.json())
       .then(data => {
         Object.entries(data).forEach(([id, status]) => {
-          // Update status pill
           const pill = document.querySelector(`#status-pill-${id}`);
           if (pill) {
             pill.className = 'sp ' + (STATUS_CLASSES[status] || '');
             pill.textContent = STATUS_LABELS[status] || status;
           }
-          // Update progress bar
           const si = STEPS.indexOf(status);
           document.querySelectorAll(`#prog-${id} .pcirc`).forEach((circ, i) => {
             circ.className = 'pcirc' + (i < si ? ' done' : (i === si ? ' cur' : ''));
-            circ.innerHTML = i < si
-              ? '<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>'
-              : (i + 1);
+            circ.innerHTML = i < si ? '<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>' : (i + 1);
           });
           document.querySelectorAll(`#prog-${id} .pline`).forEach((line, i) => {
             line.className = 'pline' + (i < si ? ' done' : '');
@@ -445,8 +486,7 @@ document.addEventListener('DOMContentLoaded', () => {
             lbl.className = 'plbl' + (i < si ? ' done' : (i === si ? ' cur' : ''));
           });
         });
-      })
-      .catch(() => {});
+      }).catch(() => {});
   }
 
   const hasActive = document.querySelector('.sp-pending, .sp-processing');

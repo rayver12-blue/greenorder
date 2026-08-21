@@ -102,15 +102,27 @@ tr:hover td{background:#fafafa}
       <div class="alert-s"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>{{ session('success') }}</div>
     @endif
 
-    <!-- STATUS FILTER TABS -->
-    <div class="stabs">
-      @foreach(['all','pending','processing','delivered','cancelled'] as $s)
-        <a href="{{ route('admin.orders', ['status'=>$s]) }}"
-           class="stab {{ $status===$s ? 'active':'' }}">
-          {{ ucfirst($s) }}
-          <span class="stab-count">{{ $counts[$s] }}</span>
-        </a>
-      @endforeach
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.65rem;margin-bottom:1rem">
+      <div class="stabs" style="margin-bottom:0">
+        @foreach(['all','pending','processing','delivered','cancelled'] as $s)
+          <a href="{{ route('admin.orders', ['status'=>$s]) }}"
+             class="stab {{ $status===$s ? 'active':'' }}">
+            {{ ucfirst($s) }}
+            <span class="stab-count">{{ $counts[$s] }}</span>
+          </a>
+        @endforeach
+      </div>
+      <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap">
+        <form method="GET" action="{{ route('admin.orders.export') }}" style="display:flex;gap:.4rem;align-items:center">
+          <input type="hidden" name="status" value="{{ $status }}">
+          <input type="date" name="from" value="{{ request('from') }}" class="fc" style="width:140px;padding:.35rem .6rem;font-size:.78rem;border:1.5px solid #d1fae5;border-radius:8px;font-family:inherit;background:#f9fefb;outline:none">
+          <input type="date" name="to"   value="{{ request('to') }}"   class="fc" style="width:140px;padding:.35rem .6rem;font-size:.78rem;border:1.5px solid #d1fae5;border-radius:8px;font-family:inherit;background:#f9fefb;outline:none">
+          <button type="submit" style="display:inline-flex;align-items:center;gap:.35rem;background:#166534;color:#fff;border:none;border-radius:8px;padding:.4rem .85rem;font-size:.78rem;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap">
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Export CSV
+          </button>
+        </form>
+      </div>
     </div>
 
     <div class="tcard">

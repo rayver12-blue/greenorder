@@ -74,6 +74,7 @@ class AdminController extends Controller
         $search   = $request->query('q');
         $day      = $request->query('day', 'all');
         $category = $request->query('category', 'all');
+        $lowStockThreshold = (int) config('greenorder.low_stock_threshold', 10);
 
         $query = Product::with('images')->withCount('reviews')->withAvg('reviews', 'rating');
 
@@ -100,7 +101,7 @@ class AdminController extends Controller
             ->orderBy('category')
             ->pluck('category');
 
-        return view('admin.products', compact('products', 'categories', 'search', 'day', 'category'));
+        return view('admin.products', compact('products', 'categories', 'search', 'day', 'category', 'lowStockThreshold'));
     }
 
     public function storeProduct(Request $request)
@@ -335,5 +336,57 @@ class AdminController extends Controller
     public function profile()
     {
         return view('admin.profile');
+    }
+
+    public function exportOrders(Request $request)
+    {
+        $status = $request->query('status', 'all');
+        $from   = $request->query('from');
+        $to     = $request->query('to');
+
+        $query = Order::with(['user', 'items.product'])->latest();
+
+        if ($status !== 'all') {
+            $query->where('status', $status);
+        }
+        if ($from) {
+            $query->whereDate('created_at', '>=', $from);
+        }
+        if ($to) {
+            $query->whereDate('created_at', '<=', $to);
+        }
+
+        $orders = $query->get();
+        $filename = 'orders-' . now()->format('Y-m-d') . '.csv';
+
+        $headers = [
+            'Content-Type'        => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+        ];
+
+        $callback = function () use ($orders) {
+            $handle = fopen('php://output', 'w');
+            fputcsv($handle, ['Order #', 'Customer', 'Email', 'Mobile', 'Type', 'Items', 'Total (PHP)', 'Payment Method', 'Payment Status', 'Order Status', 'Notes', 'Date']);
+            foreach ($orders as $order) {
+                $items = $order->items->map(fn($i) => ($i->quantity . 'x ' . ($i->product?->name ?? 'Deleted')))->join('; ');
+                fputcsv($handle, [
+                    str_pad($order->id, 4, '0', STR_PAD_LEFT),
+                    $order->user?->name ?? 'N/A',
+                    $order->user?->email ?? 'N/A',
+                    $order->user?->mobile ?? 'N/A',
+                    $order->order_type === 'dine_in' ? 'Dine In' : 'Takeout',
+                    $items,
+                    number_format($order->total_amount, 2),
+                    $order->payment_method ?? 'N/A',
+                    $order->payment_status ?? 'N/A',
+                    ucfirst($order->status),
+                    $order->notes ?? '',
+                    $order->created_at->format('Y-m-d H:i:s'),
+                ]);
+            }
+            fclose($handle);
+        };
+
+        return response()->stream($callback, 200, $headers);
     }
 }

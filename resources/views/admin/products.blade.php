@@ -29,6 +29,7 @@ img,canvas,svg{max-width:100%}
 .btn-del{display:inline-flex;align-items:center;gap:.3rem;background:#fef2f2;color:#dc2626;border:1.5px solid #fecaca;border-radius:8px;padding:.32rem .7rem;font-size:.76rem;font-weight:700;cursor:pointer;font-family:inherit;transition:all .15s;white-space:nowrap}
 .btn-del:hover{background:#fee2e2;border-color:#fca5a5}
 .alert-s{background:#f0fdf4;border:1px solid #bbf7d0;color:#166534;border-radius:10px;padding:.7rem 1rem;font-size:.83rem;margin-bottom:1rem;display:flex;align-items:center;gap:.5rem}
+.alert-w{background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;border-radius:10px;padding:.7rem 1rem;font-size:.83rem;margin-bottom:1rem;display:flex;align-items:center;gap:.5rem}
 .fbar{display:flex;align-items:flex-end;gap:.75rem;flex-wrap:wrap;background:#fff;border:1px solid #f0fdf4;border-radius:14px;padding:.85rem 1rem;box-shadow:0 1px 3px rgba(0,0,0,.04);margin-bottom:1rem}
 .fgroup{display:flex;flex-direction:column;gap:.35rem}
 .fgroup label{font-size:.7rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#5a7a5a}
@@ -58,6 +59,10 @@ td{padding:.75rem 1rem;font-size:.83rem;color:#1a2e1a;border-bottom:1px solid #f
 tr:last-child td{border-bottom:none}
 tr:hover td{background:#fafafa}
 tr.selected td{background:#f0fdf4}
+tr.low-stock-row td{background:#fff7ed}
+tr.low-stock-row:hover td{background:#ffedd5}
+.low-stock-pill{background:#fef2f2;color:#b91c1c;border:1px solid #fecaca}
+.low-stock-badge{display:inline-flex;align-items:center;padding:.2rem .55rem;border-radius:999px;background:#fef2f2;color:#b91c1c;font-size:.68rem;font-weight:800;letter-spacing:.04em;text-transform:uppercase}
 .prod-img{width:42px;height:42px;border-radius:8px;object-fit:cover;flex-shrink:0;cursor:pointer}
 .prod-img-ph{width:42px;height:42px;border-radius:8px;background:#f0fdf4;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0}
 .day-pill{display:inline-flex;background:#f0fdf4;color:#166534;font-size:.72rem;font-weight:700;padding:.2rem .6rem;border-radius:20px;white-space:nowrap}
@@ -197,6 +202,14 @@ tr.selected td{background:#f0fdf4}
       </div>
     @endif
 
+    @php $lowStockCount = $products->total() ? $products->filter(fn($product) => ($product->stock ?? 0) <= $lowStockThreshold)->count() : 0; @endphp
+    @if($lowStockCount)
+      <div class="alert-w">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>
+        <span><strong>Low stock</strong> alert: {{ $lowStockCount }} product(s) below the <strong>Threshold</strong>: {{ $lowStockThreshold }}.</span>
+      </div>
+    @endif
+
     <form class="fbar" method="GET" action="{{ route('admin.products') }}">
       <div class="fgroup">
         <label for="q">Search</label>
@@ -266,8 +279,10 @@ tr.selected td{background:#f0fdf4}
             $allImgs = $product->images->pluck('path')->toArray();
             $rating  = round($product->reviews_avg_rating ?? 0, 1);
             $rcount  = $product->reviews_count ?? 0;
+            $stock   = (int) ($product->stock ?? 0);
+            $isLowStock = $stock <= $lowStockThreshold;
           @endphp
-          <tr id="row-{{ $product->id }}">
+          <tr id="row-{{ $product->id }}" class="{{ $isLowStock ? 'low-stock-row' : '' }}">
             <td><input type="checkbox" class="row-chk" value="{{ $product->id }}" onchange="updateBulk()" style="cursor:pointer"></td>
             <td>
               <div style="display:flex;align-items:center;gap:.75rem">
@@ -299,10 +314,15 @@ tr.selected td{background:#f0fdf4}
             <td><div style="font-size:.8rem;font-weight:700;color:#1a2e1a">{{ $product->category ?? '—' }}</div></td>
             <td style="font-weight:800;color:#166534;white-space:nowrap">₱{{ number_format($product->price, 2) }}</td>
             <td>
-              @php $inStock = ($product->stock ?? 0) > 0; @endphp
-              <span class="day-pill" style="background:{{ $inStock ? '#f0fdf4' : '#fef2f2' }};color:{{ $inStock ? '#166534' : '#dc2626' }}">
-                {{ $product->stock ?? 0 }}
-              </span>
+              @php $inStock = $stock > 0; @endphp
+              <div style="display:flex;align-items:center;gap:.45rem;flex-wrap:wrap">
+                <span class="day-pill {{ $isLowStock ? 'low-stock-pill' : '' }}" style="background:{{ $inStock ? '#f0fdf4' : '#fef2f2' }};color:{{ $inStock ? '#166534' : '#dc2626' }}">
+                  {{ $stock }}
+                </span>
+                @if($isLowStock)
+                  <span class="low-stock-badge">Low stock</span>
+                @endif
+              </div>
             </td>
             <td>
               <div class="stars">
