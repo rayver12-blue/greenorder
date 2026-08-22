@@ -119,6 +119,8 @@ img,canvas,svg{max-width:100%}
 .review-submit{display:inline-flex;align-items:center;gap:.3rem;background:#166534;color:#fff;border:none;border-radius:8px;padding:.35rem .85rem;font-size:.78rem;font-weight:700;cursor:pointer;font-family:inherit;transition:background .15s}
 .review-submit:hover{background:#14532d}
 .existing-review{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:.55rem .8rem;font-size:.8rem;color:#166534}
+.review-edit{display:none;margin-top:.55rem}
+.review-edit.is-open{display:block}
 .existing-stars{display:flex;gap:1px;margin-bottom:.2rem}
 .existing-stars span{font-size:.95rem}
 .star-on{color:#f59e0b}
@@ -307,7 +309,27 @@ img,canvas,svg{max-width:100%}
                 @if($existingReview->comment)
                   <div style="margin-top:.2rem;color:#1a2e1a;font-size:.78rem">&ldquo;{{ $existingReview->comment }}&rdquo;</div>
                 @endif
+                @if($existingReview->edit_count < 1)
+                  <button type="button" class="rbtn" style="margin-top:.45rem" onclick="toggleReviewEdit({{ $order->id }}, {{ $item->product_id }})">Edit review</button>
+                @else
+                  <div style="margin-top:.35rem;color:#6b7280;font-size:.72rem">Edit used</div>
+                @endif
               </div>
+              @if($existingReview->edit_count < 1)
+                <form method="POST" action="{{ route('customer.reviews.store') }}" class="review-edit" id="review-edit-{{ $order->id }}-{{ $item->product_id }}">
+                  @csrf
+                  <input type="hidden" name="order_id" value="{{ $order->id }}">
+                  <input type="hidden" name="product_id" value="{{ $item->product_id }}">
+                  <div class="star-picker">
+                    @for($s=5;$s>=1;$s--)
+                      <input type="radio" name="rating" id="edit-r{{ $order->id }}-{{ $item->product_id }}-{{ $s }}" value="{{ $s }}" {{ $existingReview->rating === $s ? 'checked' : '' }} required>
+                      <label for="edit-r{{ $order->id }}-{{ $item->product_id }}-{{ $s }}">★</label>
+                    @endfor
+                  </div>
+                  <textarea name="comment" class="review-comment" rows="2">{{ $existingReview->comment }}</textarea>
+                  <button type="submit" class="review-submit">Save Edit</button>
+                </form>
+              @endif
             @else
               <form method="POST" action="{{ route('customer.reviews.store') }}">
                 @csrf
@@ -388,6 +410,12 @@ img,canvas,svg{max-width:100%}
     <div style="margin-top:1.25rem">{{ $orders->links() }}</div>
   @endif
 </div>
+
+<script>
+function toggleReviewEdit(orderId, productId) {
+  document.getElementById(`review-edit-${orderId}-${productId}`).classList.toggle('is-open');
+}
+</script>
 
 <div class="mover" id="cancel-modal" onclick="if(event.target===this)closeCancelModal()">
   <div class="mbox">
