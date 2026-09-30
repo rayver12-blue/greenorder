@@ -13,6 +13,16 @@ body{background:#f5f5f0;font-family:'Plus Jakarta Sans',sans-serif;margin:0}
 .nb:hover{background:#dcfce7}
 .nav-r{display:flex;align-items:center;gap:.5rem}
 .wrap{max-width:640px;margin:2rem auto;padding:0 1.25rem 3rem}
+
+/* BREADCRUMB */
+.breadcrumb-nav{padding:.75rem 0;margin-bottom:.5rem}
+.breadcrumb-list{display:flex;align-items:center;gap:.35rem;list-style:none;padding:0;margin:0;flex-wrap:wrap}
+.breadcrumb-list a{color:#5a7a5a;text-decoration:none;font-size:.82rem;font-weight:600;transition:color .15s}
+.breadcrumb-list a:hover{color:#166534}
+.breadcrumb-list li::after{content:'/';color:#b0c4b0;font-size:.8rem;margin-left:.15rem}
+.breadcrumb-list li:last-child::after{content:none}
+.breadcrumb-current{color:#1a2e1a;font-size:.82rem;font-weight:700}
+
 .actions{display:flex;align-items:center;gap:.65rem;margin-bottom:1.25rem;flex-wrap:wrap}
 .btn-back{display:inline-flex;align-items:center;gap:.4rem;background:#f0fdf4;color:#166534;border:1.5px solid #bbf7d0;border-radius:10px;padding:.5rem .9rem;font-size:.82rem;font-weight:700;text-decoration:none;transition:background .15s}
 .btn-back:hover{background:#dcfce7}
@@ -69,6 +79,13 @@ body{background:#f5f5f0;font-family:'Plus Jakarta Sans',sans-serif;margin:0}
 </nav>
 
 <div class="wrap">
+  <nav class="breadcrumb-nav" aria-label="breadcrumb">
+    <ol class="breadcrumb-list">
+      <li><a href="{{ route('customer.home') }}">Home</a></li>
+      <li><a href="{{ route('customer.orders') }}">Orders</a></li>
+      <li class="breadcrumb-current" aria-current="page">Receipt #{{ str_pad($order->id, 4, '0', STR_PAD_LEFT) }}</li>
+    </ol>
+  </nav>
   <div class="actions">
     <a href="{{ route('customer.orders') }}" class="btn-back">
       <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>

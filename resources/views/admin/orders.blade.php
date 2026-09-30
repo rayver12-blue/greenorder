@@ -51,6 +51,15 @@ tr:hover td{background:#fafafa}
 .pg-title{font-size:1.35rem;font-weight:800;color:#1a2e1a;margin-bottom:.3rem}
 .pg-sub{font-size:.83rem;color:#5a7a5a;margin-bottom:1.25rem}
 
+/* BREADCRUMB */
+.breadcrumb-nav{padding:.75rem 0;margin-bottom:.5rem}
+.breadcrumb-list{display:flex;align-items:center;gap:.35rem;list-style:none;padding:0;margin:0;flex-wrap:wrap}
+.breadcrumb-list a{color:#5a7a5a;text-decoration:none;font-size:.82rem;font-weight:600;transition:color .15s}
+.breadcrumb-list a:hover{color:#166534}
+.breadcrumb-list li::after{content:'/';color:#b0c4b0;font-size:.8rem;margin-left:.15rem}
+.breadcrumb-list li:last-child::after{content:none}
+.breadcrumb-current{color:#1a2e1a;font-size:.82rem;font-weight:700}
+
 @media (max-width: 980px){
   .al{flex-direction:column}
   .sb{position:relative;width:100%;height:auto;border-right:0;border-bottom:1px solid #dcfce7}
@@ -95,6 +104,12 @@ tr:hover td{background:#fafafa}
   </aside>
 
   <main class="mc">
+    <nav class="breadcrumb-nav" aria-label="breadcrumb">
+      <ol class="breadcrumb-list">
+        <li><a href="{{ route('admin.dashboard') }}">Dashboard</a></li>
+        <li class="breadcrumb-current" aria-current="page">Review Orders</li>
+      </ol>
+    </nav>
     <div class="pg-title">Review Orders</div>
     <div class="pg-sub">Monitor and update customer order statuses in real time.</div>
 

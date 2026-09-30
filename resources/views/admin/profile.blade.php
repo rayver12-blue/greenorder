@@ -79,6 +79,15 @@ img,canvas,svg{max-width:100%}
 .alert-danger{background:#fef2f2;border:1px solid #fecaca;color:#991b1b}
 .page-title{font-size:1.5rem;font-weight:800;color:#1a2e1a;margin-bottom:1.5rem}
 
+/* BREADCRUMB */
+.breadcrumb-nav{padding:.75rem 0;margin-bottom:.5rem}
+.breadcrumb-list{display:flex;align-items:center;gap:.35rem;list-style:none;padding:0;margin:0;flex-wrap:wrap}
+.breadcrumb-list a{color:#5a7a5a;text-decoration:none;font-size:.82rem;font-weight:600;transition:color .15s}
+.breadcrumb-list a:hover{color:#166534}
+.breadcrumb-list li::after{content:'/';color:#b0c4b0;font-size:.8rem;margin-left:.15rem}
+.breadcrumb-list li:last-child::after{content:none}
+.breadcrumb-current{color:#1a2e1a;font-size:.82rem;font-weight:700}
+
 /* â”€â”€ Audit modal â”€â”€ */
 .modal{position:fixed;inset:0;background:rgba(0,0,0,.4);display:none;align-items:center;justify-content:center;z-index:300;padding:1.25rem}
 .modal.show{display:flex}
@@ -155,6 +164,12 @@ img,canvas,svg{max-width:100%}
   </aside>
 
   <main class="main-content">
+    <nav class="breadcrumb-nav" aria-label="breadcrumb">
+      <ol class="breadcrumb-list">
+        <li><a href="{{ route('admin.dashboard') }}">Dashboard</a></li>
+        <li class="breadcrumb-current" aria-current="page">Account Profile</li>
+      </ol>
+    </nav>
     <div class="page-title">Account Profile</div>
 
     @if(session('success'))

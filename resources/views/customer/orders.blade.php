@@ -21,6 +21,14 @@ img,canvas,svg{max-width:100%}
 .flash{padding:.7rem 1rem;border-radius:10px;font-size:.83rem;margin-bottom:1rem;display:flex;align-items:center;gap:.5rem}
 .fs{background:#f0fdf4;border:1px solid #bbf7d0;color:#166534}
 .fe{background:#fef2f2;border:1px solid #fecaca;color:#991b1b}
+/* BREADCRUMB */
+.breadcrumb-nav{padding:.75rem 0;margin-bottom:.5rem}
+.breadcrumb-list{display:flex;align-items:center;gap:.35rem;list-style:none;padding:0;margin:0;flex-wrap:wrap}
+.breadcrumb-list a{color:#5a7a5a;text-decoration:none;font-size:.82rem;font-weight:600;transition:color .15s}
+.breadcrumb-list a:hover{color:#166534}
+.breadcrumb-list li::after{content:'/';color:#b0c4b0;font-size:.8rem;margin-left:.15rem}
+.breadcrumb-list li:last-child::after{content:none}
+.breadcrumb-current{color:#1a2e1a;font-size:.82rem;font-weight:700}
 /* ORDER CARD */
 .oc{background:#fff;border-radius:14px;box-shadow:0 1px 3px rgba(0,0,0,.06),0 2px 10px rgba(0,0,0,.07);margin-bottom:.9rem;overflow:hidden;border:1px solid #f0fdf4}
 .och{padding:.9rem 1.1rem;display:flex;align-items:flex-start;justify-content:space-between;cursor:pointer;user-select:none;gap:.75rem;flex-wrap:wrap}
@@ -183,6 +191,13 @@ img,canvas,svg{max-width:100%}
       </button>
     </form>
   </div>
+</nav>
+
+<nav class="breadcrumb-nav" aria-label="breadcrumb">
+  <ol class="breadcrumb-list">
+    <li><a href="{{ route('customer.home') }}">Home</a></li>
+    <li class="breadcrumb-current" aria-current="page">My Orders</li>
+  </ol>
 </nav>
 
 <div class="wrap">

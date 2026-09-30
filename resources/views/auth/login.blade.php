@@ -68,7 +68,7 @@
   </div>
 
   <div class="auth-card">
-    <div class="auth-card-title">Welcome Back 👋</div>
+    <div class="auth-card-title">Welcome Back</div>
     <div class="auth-card-sub">Sign in with your email or username</div>
 
     @if(session('error'))

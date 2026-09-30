@@ -22,6 +22,15 @@ img,canvas,svg{max-width:100%}
 .page-wrap{max-width:860px;margin:0 auto;padding:2rem}
 .page-title{font-size:1.5rem;font-weight:800;color:#1a2e1a;margin-bottom:1.5rem;display:flex;align-items:center;gap:.6rem}
 
+/* BREADCRUMB */
+.breadcrumb-nav{padding:.75rem 0;margin-bottom:.5rem}
+.breadcrumb-list{display:flex;align-items:center;gap:.35rem;list-style:none;padding:0;margin:0;flex-wrap:wrap}
+.breadcrumb-list a{color:#5a7a5a;text-decoration:none;font-size:.82rem;font-weight:600;transition:color .15s}
+.breadcrumb-list a:hover{color:#166534}
+.breadcrumb-list li::after{content:'/';color:#b0c4b0;font-size:.8rem;margin-left:.15rem}
+.breadcrumb-list li:last-child::after{content:none}
+.breadcrumb-current{color:#1a2e1a;font-size:.82rem;font-weight:700}
+
 /* Profile grid */
 .profile-grid{display:grid;grid-template-columns:1fr 1.5fr;gap:1.5rem}
 
@@ -133,6 +142,12 @@ img,canvas,svg{max-width:100%}
 </nav>
 
 <div class="page-wrap">
+  <nav class="breadcrumb-nav" aria-label="breadcrumb">
+    <ol class="breadcrumb-list">
+      <li><a href="{{ route('customer.home') }}">Home</a></li>
+      <li class="breadcrumb-current" aria-current="page">My Profile</li>
+    </ol>
+  </nav>
   <div class="page-title">
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
     My Profile
