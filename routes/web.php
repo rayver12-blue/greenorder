@@ -32,6 +32,7 @@ Route::middleware(['auth', 'role:user'])->prefix('customer')->group(function () 
     Route::post('/pay',           [CustomerController::class, 'pay'])->name('customer.pay');
     Route::post('/order',         [CustomerController::class, 'placeOrder'])->name('customer.order');
     Route::get('/orders',         [CustomerController::class, 'myOrders'])->name('customer.orders');
+    Route::get('/order-updates/count', [CustomerController::class, 'orderUpdateCount'])->name('customer.orders.update-count');
     Route::get('/orders/{order}', [CustomerController::class, 'orderDetail'])->name('customer.order.detail');
     Route::patch('/orders/{order}/cancel', [CustomerController::class, 'cancelOrder'])->name('customer.orders.cancel');
     Route::get('/orders/{order}/receipt',  [CustomerController::class, 'orderReceipt'])->name('customer.orders.receipt');
@@ -52,6 +53,8 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->group(function () {
     Route::delete('/products/{product}', [AdminController::class, 'destroyProduct'])->name('admin.products.destroy');
     Route::get('/customers',             [AdminController::class, 'customers'])->name('admin.customers');
     Route::get('/orders',                [AdminController::class, 'orders'])->name('admin.orders');
+    Route::get('/orders/new-count',      [AdminController::class, 'newOrdersCount'])->name('admin.orders.new-count');
+    Route::get('/orders/{order}/receipt', [CustomerController::class, 'orderReceipt'])->name('admin.orders.receipt');
     Route::patch('/orders/{order}/status', [AdminController::class, 'updateOrderStatus'])->name('admin.orders.status');
     Route::get('/orders/export',          [AdminController::class, 'exportOrders'])->name('admin.orders.export');
     Route::get('/reports',               [AdminController::class, 'reports'])->name('admin.reports');

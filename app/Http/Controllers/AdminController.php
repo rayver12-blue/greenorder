@@ -208,6 +208,15 @@ class AdminController extends Controller
         return view('admin.orders', compact('orders', 'status', 'counts'));
     }
 
+    public function newOrdersCount()
+    {
+        $count = Order::whereIn('status', ['pending', 'processing'])
+            ->where('created_at', '>=', now()->subMinutes(5))
+            ->count();
+
+        return response()->json(['count' => $count]);
+    }
+
     public function updateOrderStatus(Request $request, Order $order)
     {
         $request->validate(['status' => 'required|in:pending,processing,delivered,cancelled']);
@@ -216,7 +225,8 @@ class AdminController extends Controller
         $newStatus = $request->status;
 
         if ($oldStatus === $newStatus) {
-            return back()->with('success', 'Order #' . str_pad($order->id, 4, '0', STR_PAD_LEFT) . ' status is already ' . ucfirst($newStatus) . '.');
+            $label = $newStatus === 'delivered' ? 'Ready for Pick Up' : ucfirst($newStatus);
+            return back()->with('success', 'Order #' . str_pad($order->id, 4, '0', STR_PAD_LEFT) . ' status is already ' . $label . '.');
         }
 
         DB::transaction(function () use ($order, $oldStatus, $newStatus) {
@@ -241,18 +251,20 @@ class AdminController extends Controller
             }
         });
 
+        $statusLabel = $newStatus === 'delivered' ? 'Ready for Pick Up' : ucfirst($newStatus);
+
         OrderAudit::create([
             'order_id'   => $order->id,
             'user_id'    => $order->user_id,
             'actor_id'   => $request->user()->id ?? null,
             'actor_role' => 'admin',
             'action'     => 'status_changed',
-            'message'    => 'Status updated to ' . ucfirst($newStatus) . '.',
+            'message'    => 'Status updated to ' . $statusLabel . '.',
         ]);
 
         SendOrderStatusEmailJob::dispatch($order->id, $newStatus);
 
-        return back()->with('success', 'Order #' . str_pad($order->id, 4, '0', STR_PAD_LEFT) . ' status updated to ' . ucfirst($request->status) . '.');
+        return back()->with('success', 'Order #' . str_pad($order->id, 4, '0', STR_PAD_LEFT) . ' status updated to ' . $statusLabel . '.');
     }
 
     // ── Reports ───────────────────────────────────────────────────────────────

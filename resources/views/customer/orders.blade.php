@@ -208,7 +208,7 @@ img,canvas,svg{max-width:100%}
 
   <div class="filter-bar">
     <div class="ftabs">
-      @foreach(['all'=>'All','pending'=>'Placed','processing'=>'Preparing','delivered'=>'Done','cancelled'=>'Cancelled'] as $key=>$label)
+      @foreach(['all'=>'All','pending'=>'Placed','processing'=>'Preparing','delivered'=>'Pick Up','cancelled'=>'Cancelled'] as $key=>$label)
         <a href="{{ route('customer.orders', array_merge(request()->query(), ['status'=>$key, 'page'=>1])) }}"
            class="ftab {{ $status===$key ? 'active' : '' }}">
           {{ $label }}<span class="badge">{{ $counts[$key] }}</span>
@@ -234,10 +234,10 @@ img,canvas,svg{max-width:100%}
     $steps    = ['pending','processing','delivered'];
     $si       = array_search($order->status, $steps);
     $cancelled = $order->status === 'cancelled';
-    $labels   = ['Order Placed','Preparing','Completed'];
+    $labels   = ['Order Placed','Preparing','Ready for Pick Up'];
   @endphp
-  <div class="oc">
-    <div class="och" onclick="toggle({{ $order->id }})">
+  <div class="oc" data-receipt-url="{{ route('customer.orders.receipt', $order) }}">
+    <div class="och" data-receipt-url="{{ route('customer.orders.receipt', $order) }}" onclick="handleOrderCardClick(event, {{ $order->id }}, '{{ route('customer.orders.receipt', $order) }}')">
       <div class="och-l">
         <div>
           <div class="och-num">#{{ str_pad($order->id,4,'0',STR_PAD_LEFT) }}</div>
@@ -253,7 +253,7 @@ img,canvas,svg{max-width:100%}
         <span class="sp sp-{{ $order->status }}" id="status-pill-{{ $order->id }}">
           @if($order->status==='pending') Placed
           @elseif($order->status==='processing') Preparing
-          @elseif($order->status==='delivered') Done
+          @elseif($order->status==='delivered') Pick Up
           @else Cancelled @endif
         </span>
         <a href="{{ route('customer.orders.receipt', $order) }}" class="rbtn" onclick="event.stopPropagation()">
@@ -464,6 +464,11 @@ function toggle(id) {
   c.classList.toggle('open', show);
 }
 
+function handleOrderCardClick(event, id, receiptUrl) {
+  if (event.target.closest('button, a, .cbtn, .rbtn')) return;
+  window.location.href = receiptUrl;
+}
+
 function openCancelModal(orderId) {
   const base = '{{ rtrim(url("customer/orders"), "/") }}/';
   document.getElementById('cancel-form').action = base + orderId + '/cancel';
@@ -505,7 +510,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.addEventListener('keydown', e => { if(e.key==='Escape') closeCancelModal(); });
 
   const STATUS_URL = '{{ route("customer.order.statuses") }}';
-  const STATUS_LABELS = { pending: 'Placed', processing: 'Preparing', delivered: 'Done', cancelled: 'Cancelled' };
+  const STATUS_LABELS = { pending: 'Placed', processing: 'Preparing', delivered: 'Pick Up', cancelled: 'Cancelled' };
   const STATUS_CLASSES = { pending: 'sp-pending', processing: 'sp-processing', delivered: 'sp-delivered', cancelled: 'sp-cancelled' };
   const STEPS = ['pending', 'processing', 'delivered'];
 

@@ -17,6 +17,11 @@
     .logout-btn{border:none;border-radius:10px;padding:.55rem 1rem;font-size:.85rem;font-weight:700;cursor:pointer}
     .logout-cancel{background:#f5f5f0;color:#5a7a5a;border:1.5px solid #e5e7eb}
     .logout-confirm{background:#166534;color:#fff}
+    .admin-order-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#ef4444;box-shadow:0 0 0 2px rgba(239,68,68,.15);vertical-align:middle;flex-shrink:0}
+    .admin-order-dot[hidden]{display:none}
+    .admin-order-link{display:inline-flex;align-items:center;gap:.5rem}
+    .customer-order-dot{position:absolute;top:-2px;right:-2px;width:9px;height:9px;border-radius:50%;background:#ef4444;box-shadow:0 0 0 2px #fff}
+    .customer-order-dot[hidden]{display:none}
     @media (max-width: 480px){
       .logout-ft{flex-direction:column}
       .logout-btn{width:100%}
@@ -70,6 +75,65 @@
       btnConfirm?.addEventListener('click', () => {
         if (pendingForm) pendingForm.submit();
       });
+
+      const orderLink = document.querySelector('a[href*="/admin/orders"]');
+      const orderDot = document.getElementById('new-order-dot');
+      const ORDER_COUNT_URL = '{{ route('admin.orders.new-count') }}';
+
+      function updateOrderDot() {
+        fetch(ORDER_COUNT_URL, { headers: { Accept: 'application/json' } })
+          .then(r => r.json())
+          .then(data => {
+            const count = Number(data.count || 0);
+            const hasNew = count > 0;
+
+            if (orderDot) orderDot.hidden = !hasNew;
+            if (orderLink) {
+              orderLink.classList.toggle('admin-order-link', hasNew || orderLink.getAttribute('href') === '{{ route('admin.orders') }}');
+              let dot = orderLink.querySelector('.admin-order-dot');
+              if (!dot) {
+                dot = document.createElement('span');
+                dot.className = 'admin-order-dot';
+                dot.setAttribute('aria-label', 'New orders');
+                dot.hidden = !hasNew;
+                orderLink.appendChild(dot);
+              }
+              dot.hidden = !hasNew;
+            }
+          })
+          .catch(() => {});
+      }
+
+      if (ORDER_COUNT_URL) {
+        updateOrderDot();
+        setInterval(updateOrderDot, 15000);
+      }
+
+      @if(auth()->check() && auth()->user()->role === 'user')
+        const customerOrdersUrl = '{{ route('customer.orders') }}';
+        const customerUpdatesUrl = '{{ route('customer.orders.update-count') }}';
+        const customerOrderLink = document.querySelector(`a[href="${customerOrdersUrl}"]`);
+
+        function updateCustomerOrderDot() {
+          if (!customerOrderLink) return;
+          fetch(customerUpdatesUrl, { headers: { Accept: 'application/json' } })
+            .then(r => r.json())
+            .then(data => {
+              let dot = customerOrderLink.querySelector('.customer-order-dot');
+              if (!dot) {
+                dot = document.createElement('span');
+                dot.className = 'customer-order-dot';
+                dot.setAttribute('aria-label', 'Order status updated');
+                customerOrderLink.appendChild(dot);
+              }
+              dot.hidden = Number(data.count || 0) === 0;
+            })
+            .catch(() => {});
+        }
+
+        updateCustomerOrderDot();
+        setInterval(updateCustomerOrderDot, 15000);
+      @endif
     })();
   </script>
   @stack('scripts')

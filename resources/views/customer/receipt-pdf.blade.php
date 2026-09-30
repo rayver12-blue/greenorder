@@ -47,7 +47,7 @@
     <div class="status s-{{ $order->status }}">
       @if($order->status === 'pending') Order Placed
       @elseif($order->status === 'processing') Preparing
-      @elseif($order->status === 'delivered') Completed
+      @elseif($order->status === 'delivered') Ready for Pick Up
       @else Cancelled @endif
     </div>
   </div>

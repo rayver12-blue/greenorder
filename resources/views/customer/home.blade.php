@@ -100,6 +100,8 @@ img,canvas,svg{max-width:100%}
 .lb-nav{display:flex;gap:1rem}
 .lb-nav button{background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:8px;padding:.4rem .9rem;font-size:.85rem;cursor:pointer;font-family:inherit;font-weight:700}
 .lb-nav button:hover{background:rgba(255,255,255,.28)}
+.product-photo{position:relative;width:100%;min-height:300px;display:flex;align-items:center;justify-content:center}
+.product-photo-count{position:absolute;bottom:1.6rem;left:50%;transform:translateX(-50%);padding:.22rem .55rem;border-radius:20px;background:rgba(0,0,0,.58);color:#fff;font-size:.7rem;font-weight:700}
 /* cart */
 .cov{position:fixed;inset:0;background:rgba(0,0,0,.48);z-index:400;opacity:0;pointer-events:none;transition:opacity .22s}
 .cov.open{opacity:1;pointer-events:all}
@@ -228,9 +230,30 @@ img,canvas,svg{max-width:100%}
     <div class="bs">
       @foreach($bestSellers as $p)
       @php $bsRating = $p->avg_rating; @endphp
-      <div class="pc">
+      @php
+        $bsProduct = [
+          'id' => $p->id,
+          'name' => $p->name,
+          'category' => $p->category,
+          'description' => $p->description,
+          'price' => (float) $p->price,
+          'stock' => (int) ($p->stock ?? 0),
+          'sold_count' => (int) ($p->sold_count ?? 0),
+          'avg_rating' => $p->avg_rating,
+          'image' => $p->image,
+          'images' => $p->images->pluck('path')->toArray(),
+          'reviews' => $p->reviews()->with('user:id,name')->latest()->take(5)->get()->map(fn($r) => [
+            'id' => $r->id,
+            'rating' => $r->rating,
+            'comment' => $r->comment,
+            'user' => $r->user?->name ?? 'Customer',
+            'date' => $r->created_at?->format('M j, Y'),
+          ])->toArray(),
+        ];
+      @endphp
+            <div class="pc" onclick='openProductModal(@json($bsProduct))' style="cursor:pointer">
         <img class="pc-cover" src="{{ $p->image ? asset('images/'.$p->image) : asset('images/food-placeholder.svg') }}" alt="{{ $p->name }}"
-             onclick="openLightbox({{ json_encode(array_merge($p->image ? [$p->image] : [], $p->images->pluck('path')->toArray())) }}, 0)">
+              onclick='event.stopPropagation(); openProductModal(@json($bsProduct))'>
         <div class="pc-b">
           <div class="pc-n">{{ $p->name }}</div>
           <div class="pc-s">{{ $p->sold_count }} sold</div>
@@ -349,6 +372,38 @@ img,canvas,svg{max-width:100%}
   <span id="cart-toast-message">Added to cart</span>
 </div>
 
+{{-- PRODUCT MODAL --}}
+<div class="lb" id="product-modal" onclick="if(event.target===this)closeProductModal()" style="background:rgba(0,0,0,.72);">
+  <button class="lb-close" onclick="closeProductModal()">✕</button>
+  <div style="width:min(920px,92vw);max-height:86vh;overflow:auto;background:#fff;border-radius:18px;box-shadow:0 12px 40px rgba(0,0,0,.25);">
+    <div style="display:grid;grid-template-columns:1.1fr 1fr;gap:0;">
+      <div style="background:#f0fdf4;padding:1rem;display:flex;align-items:center;justify-content:center;min-height:300px;">
+       <div class="product-photo">
+        <img id="product-modal-image" src="" alt="" style="width:100%;height:100%;max-height:420px;object-fit:cover;border-radius:12px;display:block;">
+        <span class="product-photo-count" id="product-modal-image-count" aria-live="polite"></span>
+       </div>
+      </div>
+      <div style="padding:1.2rem 1.1rem 1.1rem;display:flex;flex-direction:column;gap:.8rem;">
+        <div>
+          <div id="product-modal-rating" style="display:flex;align-items:center;gap:.35rem;color:#f59e0b;font-size:.8rem;min-height:1.2rem"></div>
+          <h3 id="product-modal-name" style="margin:.15rem 0 .3rem;font-size:1.35rem;color:#1a2e1a;line-height:1.2"></h3>
+          <div id="product-modal-category" style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#5a7a5a"></div>
+        </div>
+        <div id="product-modal-price" style="font-size:1.25rem;font-weight:800;color:#166534"></div>
+        <div id="product-modal-description" style="font-size:.88rem;color:#425469;line-height:1.6"></div>
+        <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
+          <button id="product-modal-add" class="addbtn" type="button" style="padding:.5rem .9rem;font-size:.78rem">+ Add to Cart</button>
+          <button type="button" class="pg-btn" onclick="closeProductModal()" style="height:auto;padding:.5rem .9rem">Close</button>
+        </div>
+        <div style="border-top:1px solid #e5e7eb;padding-top:.8rem;display:flex;flex-direction:column;gap:.6rem;">
+          <div style="font-size:.76rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#5a7a5a;">Customer Reviews</div>
+          <div id="product-modal-reviews" style="display:flex;flex-direction:column;gap:.55rem;max-height:220px;overflow:auto;padding-right:.2rem"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 {{-- LIGHTBOX --}}
 <div class="lb" id="lightbox" onclick="if(event.target===this)closeLightbox()">
   <button class="lb-close" onclick="closeLightbox()">✕</button>
@@ -375,6 +430,7 @@ let activeCategory = 'all';
 let maxPrice       = 1000;
 let currentPage    = 1;
 let searchTimer    = null;
+let productDetailsById = new Map();
 
 // ── Tab switching ────────────────────────────────────────────────────────────
 function switchTab(day) {
@@ -432,6 +488,7 @@ function fetchProducts() {
     .then(r => r.json())
     .then(data => {
       loading.style.display = 'none';
+      productDetailsById = new Map((data.items || []).map(product => [Number(product.id), product]));
       if (!data.items.length) {
         empty.style.display = 'block';
         document.getElementById('empty-msg').textContent = 'No dishes found for ' + activeDay + '.';
@@ -457,7 +514,6 @@ function renderCard(p) {
   const outOfStock = p.stock <= 0;
   const lowStock   = p.stock > 0 && p.stock <= 5;
   const imgSrc     = p.image ? '/images/' + p.image : '/images/food-placeholder.svg';
-  const allImgs    = [p.image, ...p.images].filter(Boolean);
 
 
   let badges = '';
@@ -468,14 +524,14 @@ function renderCard(p) {
   if (p.images.length) {
     gallery = '<div class="pc-gallery">' +
       p.images.slice(0, 3).map((img, i) =>
-        `<img src="/images/${img}" class="pc-gthumb" onclick="openLightbox(${JSON.stringify(allImgs)},${i+1})">`
+        `<img src="/images/${img}" class="pc-gthumb" onclick="event.stopPropagation();openProductLightboxById(${p.id},${i+1})">`
       ).join('') +
       (p.images.length > 3 ? `<span style="font-size:.65rem;color:#9ca3af;align-self:center">+${p.images.length-3}</span>` : '') +
       '</div>';
   }
 
-  return `<div class="pc">
-    <img class="pc-cover" src="${imgSrc}" alt="${p.name}" onclick="openLightbox(${JSON.stringify(allImgs)},0)">
+  return `<div class="pc" onclick="openProductModalById(${p.id})" style="cursor:pointer">
+    <img class="pc-cover" src="${imgSrc}" alt="${p.name}">
     <div class="pc-b">
       <div class="pc-n">${p.name}</div>
       <div class="pc-s">${p.sold_count} sold</div>
@@ -485,7 +541,7 @@ function renderCard(p) {
       <div class="pc-f">
         <div class="pc-p">₱${parseFloat(p.price).toFixed(2)}</div>
 
-        <button class="addbtn" onclick="addToCart(${p.id},'${p.name.replace(/'/g,"\\'")}',${p.price},${p.stock})" ${outOfStock?'disabled':''}>+ Add</button>
+        <button class="addbtn" onclick="event.stopPropagation();addToCart(${p.id},'${p.name.replace(/'/g,"\\'")}',${p.price},${p.stock})" ${outOfStock?'disabled':''}>+ Add</button>
       </div>
     </div>
   </div>`;
@@ -513,6 +569,105 @@ function goPage(p) {
 
 // ── Lightbox ──────────────────────────────────────────────────────────────────
 let lbImages = [], lbIndex = 0;
+let activeProduct = null;
+let productCarouselImages = [];
+let productCarouselIndex = 0;
+let productCarouselTimer = null;
+
+function displayProductCarouselImage() {
+  const image = document.getElementById('product-modal-image');
+  const count = document.getElementById('product-modal-image-count');
+  const path = productCarouselImages[productCarouselIndex];
+
+  image.src = path.startsWith('/') ? path : '/images/' + path;
+  image.alt = activeProduct ? activeProduct.name : '';
+  count.textContent = (productCarouselIndex + 1) + ' / ' + productCarouselImages.length;
+}
+
+function startProductCarousel() {
+  clearInterval(productCarouselTimer);
+  if (productCarouselImages.length > 1) {
+    productCarouselTimer = setInterval(nextProductModalImage, 5000);
+  }
+}
+
+function nextProductModalImage() {
+  if (productCarouselImages.length < 2) return;
+  productCarouselIndex = (productCarouselIndex + 1) % productCarouselImages.length;
+  displayProductCarouselImage();
+  startProductCarousel();
+}
+
+function openProductModal(product) {
+  if (!product) return;
+  clearInterval(productCarouselTimer);
+  activeProduct = product;
+
+  const modal = document.getElementById('product-modal');
+  const name = document.getElementById('product-modal-name');
+  const category = document.getElementById('product-modal-category');
+  const price = document.getElementById('product-modal-price');
+  const description = document.getElementById('product-modal-description');
+  const reviewsBox = document.getElementById('product-modal-reviews');
+  const addBtn = document.getElementById('product-modal-add');
+
+  productCarouselImages = [...new Set([product.image, ...(product.images || [])].filter(Boolean))];
+  if (!productCarouselImages.length) productCarouselImages = ['food-placeholder.svg'];
+  productCarouselIndex = 0;
+  displayProductCarouselImage();
+  startProductCarousel();
+
+  name.textContent = product.name;
+  category.textContent = product.category || 'General';
+  price.textContent = '₱' + Number(product.price || 0).toFixed(2);
+  description.textContent = product.description || 'No description available for this item yet.';
+
+  const rating = Number(product.avg_rating || 0);
+  const stars = Array.from({length: 5}, (_, i) => `<span style="color:${i < Math.round(rating) ? '#f59e0b' : '#d1d5db'};font-size:1rem">★</span>`).join('');
+  document.getElementById('product-modal-rating').innerHTML = `${stars} <span style="color:#5a7a5a;font-weight:700;">${rating > 0 ? rating : 'New'}</span>`;
+
+  if (product.reviews && product.reviews.length) {
+    reviewsBox.innerHTML = product.reviews.map(review => `
+      <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;padding:.6rem .7rem;">
+        <div style="display:flex;justify-content:space-between;gap:.5rem;align-items:center;margin-bottom:.2rem;">
+          <strong style="font-size:.75rem;color:#1a2e1a">${review.user || 'Customer'}</strong>
+          <span style="color:#f59e0b;font-size:.72rem;letter-spacing:.04em">${'★'.repeat(Math.max(1, Number(review.rating || 0)))}${'☆'.repeat(5 - Math.max(1, Number(review.rating || 0)))}</span>
+        </div>
+        <div style="font-size:.72rem;color:#9ca3af;margin-bottom:.25rem">${review.date || ''}</div>
+        <div style="font-size:.78rem;color:#425469;line-height:1.5">${review.comment || 'No comment provided.'}</div>
+      </div>
+    `).join('');
+  } else {
+    reviewsBox.innerHTML = '<div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;padding:.7rem;color:#6b7280;font-size:.78rem">No reviews yet for this item.</div>';
+  }
+
+  addBtn.disabled = Number(product.stock || 0) <= 0;
+  addBtn.onclick = () => {
+    addToCart(product.id, product.name, Number(product.price || 0), Number(product.stock || 0));
+    closeProductModal();
+  };
+
+  modal.classList.add('open');
+}
+
+function openProductModalById(productId) {
+  const product = productDetailsById.get(Number(productId));
+  if (product) openProductModal(product);
+}
+
+function openProductLightboxById(productId, imageIndex) {
+  const product = productDetailsById.get(Number(productId));
+  if (!product) return;
+  openLightbox([product.image, ...(product.images || [])].filter(Boolean), imageIndex);
+}
+
+function closeProductModal() {
+  document.getElementById('product-modal').classList.remove('open');
+  clearInterval(productCarouselTimer);
+  productCarouselTimer = null;
+  activeProduct = null;
+}
+
 function openLightbox(images, index) {
   lbImages = images.filter(Boolean);
   if (!lbImages.length) return;

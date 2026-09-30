@@ -50,6 +50,21 @@ tr:hover td{background:#fafafa}
 .note-cell{font-size:.75rem;color:#92400e;background:#fffbeb;border:1px solid #fde68a;border-radius:6px;padding:.2rem .45rem;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pg-title{font-size:1.35rem;font-weight:800;color:#1a2e1a;margin-bottom:.3rem}
 .pg-sub{font-size:.83rem;color:#5a7a5a;margin-bottom:1.25rem}
+.orders-pagination svg{width:1rem;height:1rem;max-width:none;display:inline-block;vertical-align:middle}
+.orders-pagination nav>div:first-child{display:none}
+.orders-pagination nav>div:last-child{display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap}
+.orders-pagination nav>div:last-child>div:first-child{font-size:.8rem;color:#5a7a5a}
+.orders-pagination nav>div:last-child>div:last-child>span{display:flex;align-items:center;gap:.25rem;flex-wrap:wrap}
+.orders-pagination nav a,
+.orders-pagination nav [aria-disabled="true"]>span,
+.orders-pagination nav [aria-current="page"]>span{display:inline-flex;align-items:center;justify-content:center;min-width:38px;height:38px;padding:.45rem .7rem;border:1px solid #d1fae5;border-radius:8px;background:#fff;color:#166534;font-size:.8rem;font-weight:700;text-decoration:none;transition:background .15s,border-color .15s,color .15s}
+.orders-pagination nav a:hover{background:#f0fdf4;border-color:#16a34a;color:#14532d}
+.orders-pagination nav a[rel="prev"],
+.orders-pagination nav a[rel="next"],
+.orders-pagination nav [aria-label="Previous"],
+.orders-pagination nav [aria-label="Next"]{min-width:42px}
+.orders-pagination nav [aria-current="page"]>span{background:#166534;border-color:#166534;color:#fff}
+.orders-pagination nav [aria-disabled="true"]>span{background:#f9fafb;border-color:#e5e7eb;color:#9ca3af;cursor:not-allowed}
 
 /* BREADCRUMB */
 .breadcrumb-nav{padding:.75rem 0;margin-bottom:.5rem}
@@ -110,7 +125,10 @@ tr:hover td{background:#fafafa}
         <li class="breadcrumb-current" aria-current="page">Review Orders</li>
       </ol>
     </nav>
-    <div class="pg-title">Review Orders</div>
+    <div class="pg-title" style="display:flex;align-items:center;gap:.6rem;">
+      <span>Review Orders</span>
+      <span class="admin-order-dot" id="new-order-dot" aria-label="New orders available" hidden></span>
+    </div>
     <div class="pg-sub">Monitor and update customer order statuses in real time.</div>
 
     @if(session('success'))
@@ -122,7 +140,7 @@ tr:hover td{background:#fafafa}
         @foreach(['all','pending','processing','delivered','cancelled'] as $s)
           <a href="{{ route('admin.orders', ['status'=>$s]) }}"
              class="stab {{ $status===$s ? 'active':'' }}">
-            {{ ucfirst($s) }}
+            {{ $s === 'delivered' ? 'Ready for Pick Up' : ucfirst($s) }}
             <span class="stab-count">{{ $counts[$s] }}</span>
           </a>
         @endforeach
@@ -147,7 +165,7 @@ tr:hover td{background:#fafafa}
         </thead>
         <tbody>
           @forelse($orders as $order)
-          <tr>
+          <tr data-receipt-url="{{ route('admin.orders.receipt', $order) }}" onclick="handleAdminOrderRowClick(event, '{{ route('admin.orders.receipt', $order) }}')">
             <td><strong>#{{ str_pad($order->id,4,'0',STR_PAD_LEFT) }}</strong></td>
             <td>
               <div style="font-weight:600;font-size:.85rem">{{ $order->user->name ?? '—' }}</div>
@@ -167,14 +185,14 @@ tr:hover td{background:#fafafa}
                 <span style="color:#d1fae5;font-size:.78rem">—</span>
               @endif
             </td>
-            <td><span class="badge badge-{{ $order->status }}">{{ ucfirst($order->status) }}</span></td>
+            <td><span class="badge badge-{{ $order->status }}">{{ $order->status === 'delivered' ? 'Ready for Pick Up' : ucfirst($order->status) }}</span></td>
             <td style="font-size:.78rem;color:#9ca3af;white-space:nowrap">{{ $order->created_at->format('M j, g:i A') }}</td>
             <td>
               <form method="POST" action="{{ route('admin.orders.status', $order) }}" class="su-form">
                 @csrf @method('PATCH')
                 <select name="status" class="su-select">
                   @foreach(['pending','processing','delivered','cancelled'] as $s)
-                    <option value="{{ $s }}" {{ $order->status===$s ? 'selected':'' }}>{{ ucfirst($s) }}</option>
+                    <option value="{{ $s }}" {{ $order->status===$s ? 'selected':'' }}>{{ $s === 'delivered' ? 'Ready for Pick Up' : ucfirst($s) }}</option>
                   @endforeach
                 </select>
                 <button type="submit" class="su-btn">Save</button>
@@ -189,8 +207,15 @@ tr:hover td{background:#fafafa}
     </div>
 
     @if($orders->hasPages())
-      <div style="margin-top:1rem">{{ $orders->appends(['status'=>$status])->links() }}</div>
+      <div class="orders-pagination" style="margin-top:1rem">{{ $orders->appends(['status'=>$status])->links() }}</div>
     @endif
   </main>
 </div>
+
+<script>
+function handleAdminOrderRowClick(event, receiptUrl) {
+  if (event.target.closest('button, select, input, textarea, option, form')) return;
+  window.location.href = receiptUrl;
+}
+</script>
 @endsection

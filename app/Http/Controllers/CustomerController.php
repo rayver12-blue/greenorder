@@ -23,6 +23,38 @@ class CustomerController extends Controller
         return view('customer.home', compact('bestSellers', 'wishlistIds', 'categories'));
     }
 
+    public function orderUpdateCount(Request $request)
+    {
+        $latestId = OrderAudit::where('user_id', Auth::id())
+            ->where('action', 'status_changed')
+            ->max('id') ?? 0;
+        $seenKey = 'customer.order_updates.last_seen.' . Auth::id();
+
+        if (!$request->session()->has($seenKey)) {
+            $request->session()->put($seenKey, $latestId);
+        }
+
+        $count = OrderAudit::where('user_id', Auth::id())
+            ->where('action', 'status_changed')
+            ->where('id', '>', (int) $request->session()->get($seenKey))
+            ->count();
+
+        return response()->json(['count' => $count]);
+    }
+
+    private function markOrderUpdatesSeen(Request $request): void
+    {
+        if (!$request->hasSession()) {
+            return;
+        }
+
+        $latestId = OrderAudit::where('user_id', Auth::id())
+            ->where('action', 'status_changed')
+            ->max('id') ?? 0;
+
+        $request->session()->put('customer.order_updates.last_seen.' . Auth::id(), $latestId);
+    }
+
     public function productsJson(Request $request)
     {
         $day      = $request->query('day', 'common');
@@ -49,18 +81,31 @@ class CustomerController extends Controller
         $wishlistIds = Wishlist::where('user_id', Auth::id())->pluck('product_id')->toArray();
 
         return response()->json([
-            'items'     => $items->map(fn($p) => [
-                'id'         => $p->id,
-                'name'       => $p->name,
-                'category'   => $p->category,
-                'price'      => (float) $p->price,
-                'stock'      => $p->stock,
-                'sold_count' => $p->sold_count,
-                'avg_rating' => $p->avg_rating,
-                'image'      => $p->image,
-                'images'     => $p->images->pluck('path')->toArray(),
-                'wishlisted' => in_array($p->id, $wishlistIds),
-            ]),
+            'items'     => $items->map(function ($p) use ($wishlistIds) {
+                $reviews = $p->reviews()->with('user:id,name')->latest()->take(5)->get()->map(fn($r) => [
+                    'id'      => $r->id,
+                    'rating'  => $r->rating,
+                    'comment' => $r->comment,
+                    'user'    => $r->user?->name ?? 'Customer',
+                    'date'    => $r->created_at?->format('M j, Y'),
+                ]);
+
+                return [
+                    'id'         => $p->id,
+                    'name'       => $p->name,
+                    'category'   => $p->category,
+                    'description'=> $p->description,
+                    'price'      => (float) $p->price,
+                    'stock'      => $p->stock,
+                    'sold_count' => $p->sold_count,
+                    'avg_rating' => $p->avg_rating,
+                    'review_count' => $p->review_count,
+                    'image'      => $p->image,
+                    'images'     => $p->images->pluck('path')->toArray(),
+                    'reviews'    => $reviews,
+                    'wishlisted' => in_array($p->id, $wishlistIds),
+                ];
+            }),
             'total'     => $total,
             'page'      => $page,
             'per_page'  => $perPage,
@@ -358,6 +403,7 @@ class CustomerController extends Controller
 
     public function myOrders(Request $request)
     {
+        $this->markOrderUpdatesSeen($request);
         $status = $request->query('status', 'all');
         $search = $request->query('q');
 
@@ -393,7 +439,10 @@ class CustomerController extends Controller
 
     public function orderReceipt(Order $order)
     {
-        abort_if($order->user_id !== Auth::id(), 403);
+        $isOwner = $order->user_id === Auth::id();
+        $isAdmin = Auth::check() && Auth::user()->role === 'admin';
+
+        abort_if(!$isOwner && !$isAdmin, 403);
         $order->load('items.product', 'user');
         return view('customer.receipt', compact('order'));
     }

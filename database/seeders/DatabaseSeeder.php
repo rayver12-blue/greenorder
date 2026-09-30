@@ -54,5 +54,7 @@ class DatabaseSeeder extends Seeder
         foreach ($products as $p) {
             Product::updateOrCreate(['name' => $p['name']], $p);
         }
+
+        $this->call(ProductImageSeeder::class);
     }
 }
