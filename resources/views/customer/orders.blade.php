@@ -21,15 +21,24 @@ img,canvas,svg{max-width:100%}
 .flash{padding:.7rem 1rem;border-radius:10px;font-size:.83rem;margin-bottom:1rem;display:flex;align-items:center;gap:.5rem}
 .fs{background:#f0fdf4;border:1px solid #bbf7d0;color:#166534}
 .fe{background:#fef2f2;border:1px solid #fecaca;color:#991b1b}
+/* BREADCRUMB */
+.breadcrumb-nav{padding:.75rem 0;margin-bottom:.5rem}
+.breadcrumb-list{display:flex;align-items:center;gap:.35rem;list-style:none;padding:0;margin:0;flex-wrap:wrap}
+.breadcrumb-list a{color:#5a7a5a;text-decoration:none;font-size:.82rem;font-weight:600;transition:color .15s}
+.breadcrumb-list a:hover{color:#166534}
+.breadcrumb-list li::after{content:'/';color:#b0c4b0;font-size:.8rem;margin-left:.15rem}
+.breadcrumb-list li:last-child::after{content:none}
+.breadcrumb-current{color:#1a2e1a;font-size:.82rem;font-weight:700}
 /* ORDER CARD */
 .oc{background:#fff;border-radius:14px;box-shadow:0 1px 3px rgba(0,0,0,.06),0 2px 10px rgba(0,0,0,.07);margin-bottom:.9rem;overflow:hidden;border:1px solid #f0fdf4}
-.och{padding:.9rem 1.1rem;display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none;gap:.75rem}
+.och{padding:.9rem 1.1rem;display:flex;align-items:flex-start;justify-content:space-between;cursor:pointer;user-select:none;gap:.75rem;flex-wrap:wrap}
 .och:hover{background:#fafafa}
-.och-l{display:flex;align-items:center;gap:.75rem;flex:1;min-width:0}
+.och-l{display:flex;align-items:flex-start;gap:.75rem;flex:1 1 145px;min-width:145px}
+.och-l>div:first-child{min-width:145px}
 .och-num{font-weight:800;font-size:.92rem;color:#1a2e1a;white-space:nowrap}
-.och-date{font-size:.73rem;color:#9ca3af;margin-top:.08rem}
+.och-date{font-size:.73rem;color:#9ca3af;margin-top:.08rem;white-space:nowrap}
 .ot-pill{display:inline-flex;align-items:center;gap:.25rem;background:#f0fdf4;border-radius:20px;padding:.18rem .55rem;font-size:.7rem;font-weight:700;color:#166534;white-space:nowrap}
-.och-r{display:flex;align-items:center;gap:.6rem;flex-shrink:0}
+.och-r{display:flex;align-items:center;justify-content:flex-end;gap:.45rem;flex:1 1 500px;min-width:0;flex-wrap:wrap}
 .och-total{font-weight:800;font-size:.92rem;color:#1a2e1a;white-space:nowrap}
 .cbtn{background:#fef2f2;color:#dc2626;border:1.5px solid #fecaca;border-radius:8px;padding:.28rem .6rem;font-size:.72rem;font-weight:700;cursor:pointer;font-family:inherit;transition:background .12s}
 .cbtn:hover{background:#fee2e2}
@@ -119,6 +128,8 @@ img,canvas,svg{max-width:100%}
 .review-submit{display:inline-flex;align-items:center;gap:.3rem;background:#166534;color:#fff;border:none;border-radius:8px;padding:.35rem .85rem;font-size:.78rem;font-weight:700;cursor:pointer;font-family:inherit;transition:background .15s}
 .review-submit:hover{background:#14532d}
 .existing-review{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:.55rem .8rem;font-size:.8rem;color:#166534}
+.review-edit{display:none;margin-top:.55rem}
+.review-edit.is-open{display:block}
 .existing-stars{display:flex;gap:1px;margin-bottom:.2rem}
 .existing-stars span{font-size:.95rem}
 .star-on{color:#f59e0b}
@@ -133,8 +144,9 @@ img,canvas,svg{max-width:100%}
   .unm{display:none}
   .uchip{padding:.3rem .6rem}
   .wrap{padding:1rem 1rem 2rem}
-  .och{flex-direction:column;align-items:flex-start}
-  .och-r{flex-wrap:wrap;width:100%;justify-content:flex-start}
+  .och{display:grid;grid-template-columns:1fr auto;align-items:start;gap:.55rem .75rem}
+  .och-l{width:auto;align-items:flex-start}
+  .och-r{grid-column:1 / -1;display:flex;flex-wrap:wrap;width:100%;justify-content:flex-start;gap:.45rem}
   .prog{overflow-x:auto}
   .ps{min-width:120px}
 }
@@ -179,6 +191,13 @@ img,canvas,svg{max-width:100%}
       </button>
     </form>
   </div>
+</nav>
+
+<nav class="breadcrumb-nav" aria-label="breadcrumb">
+  <ol class="breadcrumb-list">
+    <li><a href="{{ route('customer.home') }}">Home</a></li>
+    <li class="breadcrumb-current" aria-current="page">My Orders</li>
+  </ol>
 </nav>
 
 <div class="wrap">
@@ -307,7 +326,27 @@ img,canvas,svg{max-width:100%}
                 @if($existingReview->comment)
                   <div style="margin-top:.2rem;color:#1a2e1a;font-size:.78rem">&ldquo;{{ $existingReview->comment }}&rdquo;</div>
                 @endif
+                @if($existingReview->edit_count < 1)
+                  <button type="button" class="rbtn" style="margin-top:.45rem" onclick="toggleReviewEdit({{ $order->id }}, {{ $item->product_id }})">Edit review</button>
+                @else
+                  <div style="margin-top:.35rem;color:#6b7280;font-size:.72rem">Edit used</div>
+                @endif
               </div>
+              @if($existingReview->edit_count < 1)
+                <form method="POST" action="{{ route('customer.reviews.store') }}" class="review-edit" id="review-edit-{{ $order->id }}-{{ $item->product_id }}">
+                  @csrf
+                  <input type="hidden" name="order_id" value="{{ $order->id }}">
+                  <input type="hidden" name="product_id" value="{{ $item->product_id }}">
+                  <div class="star-picker">
+                    @for($s=5;$s>=1;$s--)
+                      <input type="radio" name="rating" id="edit-r{{ $order->id }}-{{ $item->product_id }}-{{ $s }}" value="{{ $s }}" {{ $existingReview->rating === $s ? 'checked' : '' }} required>
+                      <label for="edit-r{{ $order->id }}-{{ $item->product_id }}-{{ $s }}">★</label>
+                    @endfor
+                  </div>
+                  <textarea name="comment" class="review-comment" rows="2">{{ $existingReview->comment }}</textarea>
+                  <button type="submit" class="review-submit">Save Edit</button>
+                </form>
+              @endif
             @else
               <form method="POST" action="{{ route('customer.reviews.store') }}">
                 @csrf
@@ -388,6 +427,12 @@ img,canvas,svg{max-width:100%}
     <div style="margin-top:1.25rem">{{ $orders->links() }}</div>
   @endif
 </div>
+
+<script>
+function toggleReviewEdit(orderId, productId) {
+  document.getElementById(`review-edit-${orderId}-${productId}`).classList.toggle('is-open');
+}
+</script>
 
 <div class="mover" id="cancel-modal" onclick="if(event.target===this)closeCancelModal()">
   <div class="mbox">

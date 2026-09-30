@@ -81,9 +81,7 @@ img,canvas,svg{max-width:100%}
 .addbtn{background:#166534;color:#fff;border:none;border-radius:8px;padding:.28rem .65rem;font-size:.72rem;font-weight:700;cursor:pointer;font-family:inherit;transition:background .15s;white-space:nowrap}
 .addbtn:hover{background:#14532d}
 .addbtn:disabled{background:#e5e7eb;color:#9ca3af;cursor:not-allowed}
-.wbtn{background:none;border:none;cursor:pointer;padding:.18rem .3rem;line-height:1;transition:transform .15s;flex-shrink:0}
-.wbtn:hover{transform:scale(1.2)}
-.wbtn svg{display:block}
+
 /* gallery thumbs on card */
 .pc-gallery{display:flex;gap:.25rem;flex-wrap:wrap;margin-top:.3rem}
 .pc-gthumb{width:24px;height:24px;border-radius:3px;object-fit:cover;cursor:pointer;border:1px solid #e5e7eb}
@@ -119,7 +117,13 @@ img,canvas,svg{max-width:100%}
 .qb{width:24px;height:24px;border:1.5px solid #d1fae5;border-radius:6px;background:#fff;cursor:pointer;color:#166534;font-weight:800;line-height:1;display:flex;align-items:center;justify-content:center;font-size:.95rem;transition:background .12s}
 .qb:hover{background:#f0fdf4}
 .qn{font-weight:800;min-width:20px;text-align:center;font-size:.86rem;color:#1a2e1a}
-.csummary{padding:1rem 1.25rem;border-top:1px solid #f0fdf4;background:#fafafa}
+.csummary{padding:1rem 1.25rem;border-top:1px solid #f0fdf4;background:#fafafa;position:sticky;bottom:0;z-index:10;box-shadow:0 -2px 12px rgba(0,0,0,.06)}
+
+/* MOBILE STICKY SUMMARY */
+@media(max-width:420px){
+  .csummary{box-shadow:0 -3px 16px rgba(0,0,0,.1)}
+  .cbody{padding-bottom:130px}
+}
 .ot-label{font-size:.76rem;font-weight:700;color:#5a7a5a;margin-bottom:.38rem;text-transform:uppercase;letter-spacing:.05em}
 .ot-row{display:grid;grid-template-columns:1fr 1fr;gap:.55rem;margin-bottom:.75rem}
 .otbtn{border:2px solid #e5e7eb;border-radius:10px;padding:.55rem;cursor:pointer;background:#fff;font-family:inherit;transition:all .15s;text-align:center}
@@ -138,6 +142,10 @@ img,canvas,svg{max-width:100%}
 .cart-empty{text-align:center;padding:2.5rem 1rem;color:#9ca3af}
 .cart-empty svg{opacity:.28;margin-bottom:.65rem}
 .cart-empty p{font-size:.85rem;line-height:1.5}
+.cart-toast{position:fixed;right:1.25rem;bottom:1.25rem;z-index:600;display:flex;align-items:center;gap:.55rem;background:#166534;color:#fff;border-radius:10px;padding:.7rem 1rem;box-shadow:0 6px 20px rgba(0,0,0,.18);font-size:.8rem;font-weight:700;opacity:0;transform:translateY(12px);pointer-events:none;transition:opacity .2s,transform .2s}
+.cart-toast.show{opacity:1;transform:none}
+.cart-toast svg{flex-shrink:0}
+@media(max-width:420px){.cart-toast{left:1rem;right:1rem;bottom:1rem;justify-content:center}}
 @media(max-width:900px){
   .nav{height:auto;padding:.75rem 1rem;flex-wrap:wrap;gap:.6rem}
   .nav-brand img{width:52px;height:52px}
@@ -174,7 +182,7 @@ img,canvas,svg{max-width:100%}
     <div class="nav-brand-text"><strong>GreenOrder</strong><span>Food Ordering Platform</span></div>
   </a>
   <div class="nav-r">
-    <a href="{{ route('customer.orders') }}" class="nb" title="My Orders">
+      <a href="{{ route('customer.orders') }}" class="nb" title="My Orders">
       <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
     </a>
     <button class="nb" title="Cart" onclick="openCart()">
@@ -216,7 +224,7 @@ img,canvas,svg{max-width:100%}
   {{-- BEST SELLERS --}}
   @if($bestSellers->count())
   <div style="margin-bottom:1.5rem">
-    <div class="sh"><span class="sh-t">🔥 Best Sellers</span><span class="sh-b">{{ $bestSellers->count() }} picks</span></div>
+    <div class="sh"><span class="sh-t"> Best Sellers</span><span class="sh-b">{{ $bestSellers->count() }} picks</span></div>
     <div class="bs">
       @foreach($bestSellers as $p)
       @php $bsRating = $p->avg_rating; @endphp
@@ -336,6 +344,11 @@ img,canvas,svg{max-width:100%}
   </div>
 </div>
 
+<div class="cart-toast" id="cart-toast" role="status" aria-live="polite">
+  <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+  <span id="cart-toast-message">Added to cart</span>
+</div>
+
 {{-- LIGHTBOX --}}
 <div class="lb" id="lightbox" onclick="if(event.target===this)closeLightbox()">
   <button class="lb-close" onclick="closeLightbox()">✕</button>
@@ -354,7 +367,7 @@ const ALLOWED  = @json($allowedTabs);
 const USER_ID  = {{ auth()->id() }};
 const CART_KEY = 'greenorder_cart_v1_user_' + USER_ID;
 const PRODUCTS_URL  = '{{ route("customer.products.json") }}';
-const WISHLIST_URL  = '{{ route("customer.wishlist.toggle", ["product" => "__ID__"]) }}';
+
 const CSRF = '{{ csrf_token() }}';
 
 let activeDay      = ALLOWED.includes(TODAY) ? TODAY : 'common';
@@ -445,7 +458,7 @@ function renderCard(p) {
   const lowStock   = p.stock > 0 && p.stock <= 5;
   const imgSrc     = p.image ? '/images/' + p.image : '/images/food-placeholder.svg';
   const allImgs    = [p.image, ...p.images].filter(Boolean);
-  const wFill      = p.wishlisted ? '#ef4444' : 'none';
+
 
   let badges = '';
   if (outOfStock) badges = '<span class="stock-badge stock-out">Out of stock</span>';
@@ -471,9 +484,7 @@ function renderCard(p) {
       ${gallery}
       <div class="pc-f">
         <div class="pc-p">₱${parseFloat(p.price).toFixed(2)}</div>
-        <button class="wbtn" onclick="toggleWishlist(${p.id},this)" data-wishlisted="${p.wishlisted?'1':'0'}">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" stroke="#ef4444" stroke-width="2" fill="${wFill}"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-        </button>
+
         <button class="addbtn" onclick="addToCart(${p.id},'${p.name.replace(/'/g,"\\'")}',${p.price},${p.stock})" ${outOfStock?'disabled':''}>+ Add</button>
       </div>
     </div>
@@ -498,16 +509,7 @@ function goPage(p) {
   document.getElementById('day-tabs').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
-// ── Wishlist ──────────────────────────────────────────────────────────────────
-function toggleWishlist(id, btn) {
-  const url = WISHLIST_URL.replace('__ID__', id);
-  fetch(url, { method: 'POST', headers: { 'X-CSRF-TOKEN': CSRF, 'Accept': 'application/json' } })
-    .then(r => r.json())
-    .then(data => {
-      btn.dataset.wishlisted = data.wishlisted ? '1' : '0';
-      btn.querySelector('svg').setAttribute('fill', data.wishlisted ? '#ef4444' : 'none');
-    });
-}
+
 
 // ── Lightbox ──────────────────────────────────────────────────────────────────
 let lbImages = [], lbIndex = 0;
@@ -526,6 +528,7 @@ function lbNav(dir) {
 
 // ── Cart ──────────────────────────────────────────────────────────────────────
 let cartItems = [], ot = 'dine_in';
+let toastTimer = null;
 function openCart()  { document.getElementById('cart-ov').classList.add('open'); }
 function closeCart() { document.getElementById('cart-ov').classList.remove('open'); }
 
@@ -534,6 +537,14 @@ function loadCart() {
   catch(_) { cartItems = []; }
 }
 function saveCart() { localStorage.setItem(CART_KEY, JSON.stringify(cartItems)); }
+
+function showCartToast(message) {
+  const toast = document.getElementById('cart-toast');
+  document.getElementById('cart-toast-message').textContent = message;
+  toast.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toast.classList.remove('show'), 2400);
+}
 
 function setOT(type) {
   ot = type;
@@ -548,7 +559,8 @@ function addToCart(id, name, price, stock) {
   price = parseFloat(price);
   const ex = cartItems.find(i => i.id === id);
   if (ex) ex.qty++; else cartItems.push({id, name, price, qty:1});
-  saveCart(); renderCart(); openCart();
+  saveCart(); renderCart();
+  showCartToast(ex ? `${name} quantity updated` : `${name} added to cart`);
 }
 
 function changeQty(id, d) {

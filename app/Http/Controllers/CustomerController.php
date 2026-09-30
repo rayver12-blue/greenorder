@@ -421,12 +421,34 @@ class CustomerController extends Controller
 
         abort_if(!$order->items()->where('product_id', $request->product_id)->exists(), 403);
 
-        ProductReview::updateOrCreate(
-            ['order_id' => $order->id, 'user_id' => Auth::id(), 'product_id' => $request->product_id],
-            ['rating' => $request->rating, 'comment' => $request->filled('comment') ? trim($request->comment) : null]
-        );
+        $wasUpdate = DB::transaction(function () use ($order, $request) {
+            $review = ProductReview::where('order_id', $order->id)
+                ->where('user_id', Auth::id())
+                ->where('product_id', $request->product_id)
+                ->lockForUpdate()
+                ->first();
 
-        return back()->with('success', 'Review submitted!');
+            $attributes = [
+                'rating' => $request->rating,
+                'comment' => $request->filled('comment') ? trim($request->comment) : null,
+            ];
+
+            if (!$review) {
+                ProductReview::create([
+                    'order_id' => $order->id,
+                    'user_id' => Auth::id(),
+                    'product_id' => $request->product_id,
+                    ...$attributes,
+                ]);
+                return false;
+            }
+
+            abort_if($review->edit_count >= 1, 403, 'This review can only be edited once.');
+            $review->update([...$attributes, 'edit_count' => $review->edit_count + 1]);
+            return true;
+        });
+
+        return back()->with('success', $wasUpdate ? 'Review updated!' : 'Review submitted!');
     }
 
     public function toggleWishlist(Request $request, Product $product)

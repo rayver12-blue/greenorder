@@ -118,7 +118,7 @@ tr:hover td{background:#fafafa}
     </div>
 
     <div class="tcard">
-      <div class="tcard-hd">🏆 Top 10 Best-Selling Products</div>
+      <div class="tcard-hd"> Top 10 Best-Selling Products</div>
       <table>
         <thead><tr><th>#</th><th>Product</th><th>Day</th><th>Units Sold</th><th>Est. Revenue</th></tr></thead>
         <tbody>

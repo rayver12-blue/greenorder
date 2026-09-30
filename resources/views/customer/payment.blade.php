@@ -18,6 +18,8 @@ a,button,input,select{font:inherit}
 .unm{font-size:.82rem;font-weight:600;color:#1a2e1a}
 .wrap{max-width:1100px;margin:0 auto;padding:2rem 1.25rem 3rem}
 .page-title{display:flex;align-items:center;gap:.65rem;font-weight:800;font-size:1.45rem;color:#1a2e1a;margin-bottom:1.25rem}
+.back-btn{display:inline-flex;align-items:center;gap:.35rem;border:1.5px solid #d1fae5;border-radius:9px;background:#fff;color:#166534;padding:.4rem .7rem;font-size:.76rem;font-weight:700;cursor:pointer;transition:background .15s,border-color .15s;margin-bottom:.8rem}
+.back-btn:hover{background:#f0fdf4;border-color:#86efac}
 .flash{padding:.7rem 1rem;border-radius:10px;font-size:.83rem;margin-bottom:1rem;display:flex;align-items:center;gap:.5rem}
 .fs{background:#f0fdf4;border:1px solid #bbf7d0;color:#166534}
 .fe{background:#fef2f2;border:1px solid #fecaca;color:#991b1b}
@@ -54,6 +56,15 @@ a,button,input,select{font:inherit}
 .total-box strong{color:#166534}
 .inline-badge{display:inline-flex;align-items:center;gap:.35rem;background:#fff7ed;border:1px solid #fed7aa;border-radius:20px;padding:.18rem .52rem;font-size:.68rem;font-weight:800;color:#9a4d00}
 .pay-btn{width:100%;margin-top:1rem;border:none;border-radius:12px;padding:.85rem 1rem;background:linear-gradient(135deg,#166534,#16a34a);color:#fff;font-weight:800;cursor:pointer;box-shadow:0 5px 16px rgba(22,101,52,.2)}
+
+/* BREADCRUMB */
+.breadcrumb-nav{padding:.75rem 0;margin-bottom:.5rem}
+.breadcrumb-list{display:flex;align-items:center;gap:.35rem;list-style:none;padding:0;margin:0;flex-wrap:wrap}
+.breadcrumb-list a{color:#5a7a5a;text-decoration:none;font-size:.82rem;font-weight:600;transition:color .15s}
+.breadcrumb-list a:hover{color:#166534}
+.breadcrumb-list li::after{content:'/';color:#b0c4b0;font-size:.8rem;margin-left:.15rem}
+.breadcrumb-list li:last-child::after{content:none}
+.breadcrumb-current{color:#1a2e1a;font-size:.82rem;font-weight:700}
 .pay-btn:hover{opacity:.96}
 .pay-btn[disabled]{cursor:wait;opacity:.75}
 .cod-box{padding:.8rem .9rem;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;color:#166534;font-weight:700;font-size:.9rem}
@@ -94,6 +105,16 @@ a,button,input,select{font:inherit}
 </nav>
 
 <div class="wrap">
+  <nav class="breadcrumb-nav" aria-label="breadcrumb">
+    <ol class="breadcrumb-list">
+      <li><a href="{{ route('customer.home') }}">Home</a></li>
+      <li class="breadcrumb-current" aria-current="page">Payment</li>
+    </ol>
+  </nav>
+  <button type="button" class="back-btn" onclick="goBackToCart()">
+    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5"/><polyline points="12 19 5 12 12 5"/></svg>
+    Back to Cart
+  </button>
   <div class="page-title">
     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2"><path d="M3 9.5A2.5 2.5 0 0 1 5.5 7h13A2.5 2.5 0 0 1 21 9.5v5A2.5 2.5 0 0 1 18.5 17h-13A2.5 2.5 0 0 1 3 14.5v-5z"/><path d="M3 10h18"/><path d="M7 15h3"/></svg>
     Secure Payment
@@ -106,8 +127,8 @@ a,button,input,select{font:inherit}
   <div class="grid">
     <div class="card">
       <div class="panel-head">
-        <span>Select Payment Method</span>
-        <small>DEMO / SIMULATION</small>
+        <span>Select Payment</span>
+
       </div>
       <div class="panel-body">
         <div class="notice">
@@ -121,17 +142,17 @@ a,button,input,select{font:inherit}
           <input type="hidden" name="notes" value="{{ $checkout['notes'] ?? '' }}">
           <div class="method-grid">
             <button type="button" class="method-btn" data-method="gcash">
-              <span class="method-icon">💸</span>
+              
               <span class="method-title">GCash</span>
-              <span class="method-sub">Simulated GCash Payment</span>
+              <span class="method-sub">GCash Payment</span>
             </button>
             <button type="button" class="method-btn" data-method="card">
-              <span class="method-icon">💳</span>
+              
               <span class="method-title">Credit/Debit Card</span>
-              <span class="method-sub">Simulated Card Payment</span>
+              <span class="method-sub">Card Payment</span>
             </button>
             <button type="button" class="method-btn" data-method="cod">
-              <span class="method-icon">🚚</span>
+              
               <span class="method-title">Cash on Delivery</span>
               <span class="method-sub">Pay when your order arrives</span>
             </button>
@@ -226,6 +247,14 @@ a,button,input,select{font:inherit}
 </div>
 
 <script>
+  function goBackToCart() {
+    if (window.history.length > 1) {
+      window.history.back();
+      return;
+    }
+    window.location.href = @json(route('customer.home'));
+  }
+
   const methods = document.querySelectorAll('.method-btn');
   const formShells = document.querySelectorAll('.form-shell');
   const hiddenMethod = document.getElementById('payment_method');
