@@ -47,6 +47,7 @@ img,canvas,svg{max-width:100%}
 .sp-pending   {background:#fff7ed;color:#c2410c}
 .sp-processing{background:#eff6ff;color:#1d4ed8}
 .sp-delivered {background:#f0fdf4;color:#166534}
+.sp-done{background:#dcfce7;color:#14532d}
 .sp-cancelled {background:#fef2f2;color:#dc2626}
 .chev{transition:transform .22s;color:#9ca3af;flex-shrink:0}
 .chev.open{transform:rotate(180deg)}
@@ -208,7 +209,7 @@ img,canvas,svg{max-width:100%}
 
   <div class="filter-bar">
     <div class="ftabs">
-      @foreach(['all'=>'All','pending'=>'Placed','processing'=>'Preparing','delivered'=>'Pick Up','cancelled'=>'Cancelled'] as $key=>$label)
+      @foreach(['all'=>'All','pending'=>'Placed','processing'=>'Preparing','delivered'=>'Ready for Pick Up','done'=>'Done','cancelled'=>'Cancelled'] as $key=>$label)
         <a href="{{ route('customer.orders', array_merge(request()->query(), ['status'=>$key, 'page'=>1])) }}"
            class="ftab {{ $status===$key ? 'active' : '' }}">
           {{ $label }}<span class="badge">{{ $counts[$key] }}</span>
@@ -231,10 +232,10 @@ img,canvas,svg{max-width:100%}
 
   @forelse($orders as $order)
   @php
-    $steps    = ['pending','processing','delivered'];
+    $steps    = ['pending','processing','delivered','done'];
     $si       = array_search($order->status, $steps);
     $cancelled = $order->status === 'cancelled';
-    $labels   = ['Order Placed','Preparing','Ready for Pick Up'];
+    $labels   = ['Order Placed','Preparing','Ready for Pick Up','Done'];
   @endphp
   <div class="oc" data-receipt-url="{{ route('customer.orders.receipt', $order) }}">
     <div class="och" data-receipt-url="{{ route('customer.orders.receipt', $order) }}" onclick="handleOrderCardClick(event, {{ $order->id }}, '{{ route('customer.orders.receipt', $order) }}')">
@@ -253,7 +254,8 @@ img,canvas,svg{max-width:100%}
         <span class="sp sp-{{ $order->status }}" id="status-pill-{{ $order->id }}">
           @if($order->status==='pending') Placed
           @elseif($order->status==='processing') Preparing
-          @elseif($order->status==='delivered') Pick Up
+          @elseif($order->status==='delivered') Ready for Pick Up
+          @elseif($order->status==='done') Done
           @else Cancelled @endif
         </span>
         <a href="{{ route('customer.orders.receipt', $order) }}" class="rbtn" onclick="event.stopPropagation()">
@@ -308,7 +310,7 @@ img,canvas,svg{max-width:100%}
       @endforeach
       <div class="itotal-row"><span>Total</span><span>&#8369;{{ number_format($order->total_amount,2) }}</span></div>
 
-      @if($order->status === 'delivered')
+      @if(in_array($order->status, ['delivered', 'done'], true))
       <div class="review-section">
         <h4>⭐ Rate Your Order</h4>
         @foreach($order->items as $item)
@@ -510,9 +512,9 @@ document.addEventListener('DOMContentLoaded', () => {
   document.addEventListener('keydown', e => { if(e.key==='Escape') closeCancelModal(); });
 
   const STATUS_URL = '{{ route("customer.order.statuses") }}';
-  const STATUS_LABELS = { pending: 'Placed', processing: 'Preparing', delivered: 'Pick Up', cancelled: 'Cancelled' };
-  const STATUS_CLASSES = { pending: 'sp-pending', processing: 'sp-processing', delivered: 'sp-delivered', cancelled: 'sp-cancelled' };
-  const STEPS = ['pending', 'processing', 'delivered'];
+  const STATUS_LABELS = { pending: 'Placed', processing: 'Preparing', delivered: 'Ready for Pick Up', done: 'Done', cancelled: 'Cancelled' };
+  const STATUS_CLASSES = { pending: 'sp-pending', processing: 'sp-processing', delivered: 'sp-delivered', done: 'sp-done', cancelled: 'sp-cancelled' };
+  const STEPS = ['pending', 'processing', 'delivered', 'done'];
 
   function pollStatuses() {
     fetch(STATUS_URL, { headers: { 'Accept': 'application/json' } })
@@ -539,7 +541,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }).catch(() => {});
   }
 
-  const hasActive = document.querySelector('.sp-pending, .sp-processing');
+  const hasActive = document.querySelector('.sp-pending, .sp-processing, .sp-delivered');
   if (hasActive) setInterval(pollStatuses, 10000);
 });
 </script>

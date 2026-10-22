@@ -20,19 +20,20 @@ class AdminController extends Controller
 {
     public function dashboard()
     {
-        // Revenue stats (only delivered = completed orders)
-        $totalRevenue    = Order::where('status', 'delivered')->sum('total_amount');
-        $todayRevenue    = Order::where('status', 'delivered')->whereDate('updated_at', today())->sum('total_amount');
+        // Revenue stats include orders ready for pickup and completed orders.
+        $totalRevenue    = Order::whereIn('status', ['delivered', 'done'])->sum('total_amount');
+        $todayRevenue    = Order::whereIn('status', ['delivered', 'done'])->whereDate('updated_at', today())->sum('total_amount');
         $todayOrders     = Order::whereDate('created_at', today())->count();
-        $monthRevenue    = Order::where('status', 'delivered')->whereMonth('updated_at', now()->month)->whereYear('updated_at', now()->year)->sum('total_amount');
-        $monthDelivered  = Order::where('status', 'delivered')->whereMonth('updated_at', now()->month)->whereYear('updated_at', now()->year)->count();
+        $monthRevenue    = Order::whereIn('status', ['delivered', 'done'])->whereMonth('updated_at', now()->month)->whereYear('updated_at', now()->year)->sum('total_amount');
+        $monthCompleted  = Order::whereIn('status', ['delivered', 'done'])->whereMonth('updated_at', now()->month)->whereYear('updated_at', now()->year)->count();
 
         // Counts
         $totalProducts   = Product::count();
         $totalOrders     = Order::count();
         $pendingOrders   = Order::where('status', 'pending')->count();
         $processingOrders = Order::where('status', 'processing')->count();
-        $completedOrders = Order::where('status', 'delivered')->count();
+        $completedOrders = Order::whereIn('status', ['delivered', 'done'])->count();
+        $doneOrders      = Order::where('status', 'done')->count();
         $cancelledOrders = Order::where('status', 'cancelled')->count();
 
         // Recent orders (latest 8)
@@ -44,12 +45,12 @@ class AdminController extends Controller
             $dateString = $date->toDateString();
             return [
                 'date'    => $date->format('M j'),
-                'revenue' => (float) Order::where('status', 'delivered')
+                'revenue' => (float) Order::whereIn('status', ['delivered', 'done'])
                     ->whereDate('updated_at', $dateString)
                     ->sum('total_amount'),
                 'orders'  => Order::whereDate('created_at', $dateString)->count(),
                 'sold'    => (int) OrderItem::whereHas('order', function ($q) use ($dateString) {
-                    $q->where('status', 'delivered')->whereDate('updated_at', $dateString);
+                    $q->whereIn('status', ['delivered', 'done'])->whereDate('updated_at', $dateString);
                 })->sum('quantity'),
             ];
         });
@@ -58,14 +59,15 @@ class AdminController extends Controller
         $statusBreakdown = [
             ['label' => 'Pending',    'value' => $pendingOrders,    'color' => '#f59e0b'],
             ['label' => 'Processing', 'value' => $processingOrders, 'color' => '#3b82f6'],
-            ['label' => 'Delivered',  'value' => $completedOrders,  'color' => '#16a34a'],
+            ['label' => 'Ready for Pick Up', 'value' => Order::where('status', 'delivered')->count(), 'color' => '#16a34a'],
+            ['label' => 'Done',       'value' => $doneOrders,        'color' => '#15803d'],
             ['label' => 'Cancelled',  'value' => $cancelledOrders,  'color' => '#ef4444'],
         ];
 
         return view('admin.dashboard', compact(
             'totalRevenue', 'todayRevenue', 'todayOrders',
-            'monthRevenue', 'monthDelivered',
-            'totalProducts', 'totalOrders',
+            'monthRevenue', 'monthCompleted',
+            'totalProducts', 'totalOrders', 'doneOrders',
             'pendingOrders', 'processingOrders', 'completedOrders', 'cancelledOrders',
             'recentOrders', 'chartData', 'statusBreakdown'
         ));
@@ -202,6 +204,7 @@ class AdminController extends Controller
             'pending'    => Order::where('status', 'pending')->count(),
             'processing' => Order::where('status', 'processing')->count(),
             'delivered'  => Order::where('status', 'delivered')->count(),
+            'done'       => Order::where('status', 'done')->count(),
             'cancelled'  => Order::where('status', 'cancelled')->count(),
         ];
 
@@ -219,14 +222,22 @@ class AdminController extends Controller
 
     public function updateOrderStatus(Request $request, Order $order)
     {
-        $request->validate(['status' => 'required|in:pending,processing,delivered,cancelled']);
+        $request->validate(['status' => 'required|in:pending,processing,delivered,done,cancelled']);
 
         $oldStatus = $order->status;
         $newStatus = $request->status;
 
         if ($oldStatus === $newStatus) {
-            $label = $newStatus === 'delivered' ? 'Ready for Pick Up' : ucfirst($newStatus);
+            $label = match ($newStatus) {
+                'delivered' => 'Ready for Pick Up',
+                'done' => 'Done',
+                default => ucfirst($newStatus),
+            };
             return back()->with('success', 'Order #' . str_pad($order->id, 4, '0', STR_PAD_LEFT) . ' status is already ' . $label . '.');
+        }
+
+        if ($newStatus === 'done' && $oldStatus !== 'delivered') {
+            return back()->with('error', 'Order must be Ready for Pick Up before it can be marked Done.');
         }
 
         DB::transaction(function () use ($order, $oldStatus, $newStatus) {
@@ -251,7 +262,11 @@ class AdminController extends Controller
             }
         });
 
-        $statusLabel = $newStatus === 'delivered' ? 'Ready for Pick Up' : ucfirst($newStatus);
+        $statusLabel = match ($newStatus) {
+            'delivered' => 'Ready for Pick Up',
+            'done' => 'Done',
+            default => ucfirst($newStatus),
+        };
 
         OrderAudit::create([
             'order_id'   => $order->id,
@@ -272,20 +287,23 @@ class AdminController extends Controller
     public function reports()
     {
         $topProducts = Product::withSum(
-            ['orderItems as total_sold' => fn($q) => $q->whereHas('order', fn($q) => $q->where('status', 'delivered'))],
+            ['orderItems as total_sold' => fn($q) => $q->whereHas('order', fn($q) => $q->whereIn('status', ['delivered', 'done']))],
             'quantity'
         )->orderByDesc('total_sold')->limit(10)->get();
 
-        $monthlyRevenue = collect(range(11, 0))->map(function ($monthsAgo) {
-            $date = now()->subMonths($monthsAgo);
-            return [
+        $startMonth = now()->setDate(2026, 7, 1)->startOfMonth();
+        $currentMonth = now()->startOfMonth();
+        $monthlyRevenue = collect();
+
+        for ($date = $startMonth->copy(); $date->lte($currentMonth); $date->addMonth()) {
+            $monthlyRevenue->push([
                 'month'   => $date->format('M Y'),
-                'revenue' => (float) Order::where('status', 'delivered')
+                'revenue' => (float) Order::whereIn('status', ['delivered', 'done'])
                     ->whereYear('created_at', $date->year)
                     ->whereMonth('created_at', $date->month)
                     ->sum('total_amount'),
-            ];
-        });
+            ]);
+        }
 
         return view('admin.reports', compact('topProducts', 'monthlyRevenue'));
     }

@@ -61,6 +61,48 @@ class OrderStatusNotificationTest extends TestCase
         $this->assertSame('Ready for Pick Up', $order->status_label);
     }
 
+    public function test_admin_can_mark_an_order_done_after_pickup(): void
+    {
+        Bus::fake();
+
+        $admin = User::factory()->create(['role' => 'admin']);
+        $order = Order::create([
+            'user_id' => User::factory()->create(['role' => 'user'])->id,
+            'total_amount' => 120.00,
+            'status' => 'delivered',
+            'order_type' => 'takeout',
+            'payment_method' => 'cash',
+            'payment_status' => 'Paid',
+        ]);
+        $request = Request::create('/admin/orders/' . $order->id . '/status', 'PATCH', ['status' => 'done']);
+        $request->setUserResolver(fn () => $admin);
+
+        app(AdminController::class)->updateOrderStatus($request, $order);
+
+        $this->assertSame('done', $order->fresh()->status);
+        $this->assertSame('Done', $order->fresh()->status_label);
+        Bus::assertDispatched(SendOrderStatusEmailJob::class, fn ($job) => $job->orderId === $order->id && $job->status === 'done');
+    }
+
+    public function test_admin_cannot_mark_an_order_done_before_pickup(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $order = Order::create([
+            'user_id' => User::factory()->create(['role' => 'user'])->id,
+            'total_amount' => 120.00,
+            'status' => 'pending',
+            'order_type' => 'takeout',
+            'payment_method' => 'cash',
+            'payment_status' => 'Unpaid',
+        ]);
+        $request = Request::create('/admin/orders/' . $order->id . '/status', 'PATCH', ['status' => 'done']);
+        $request->setUserResolver(fn () => $admin);
+
+        app(AdminController::class)->updateOrderStatus($request, $order);
+
+        $this->assertSame('pending', $order->fresh()->status);
+    }
+
     public function test_customer_order_cards_include_receipt_navigation(): void
     {
         $user = User::factory()->create(['role' => 'user']);
@@ -103,7 +145,31 @@ class OrderStatusNotificationTest extends TestCase
         $html = $response->render();
 
         $this->assertStringContainsString('Ready for Pick Up', $html);
+        $this->assertStringContainsString('value="done"', $html);
         $this->assertStringContainsString('data-receipt-url="' . route('admin.orders.receipt', $order) . '"', $html);
+    }
+
+    public function test_customer_order_progress_shows_done_after_ready_for_pickup(): void
+    {
+        $user = User::factory()->create(['role' => 'user']);
+        $this->actingAs($user);
+        $order = Order::create([
+            'user_id' => $user->id,
+            'total_amount' => 120.00,
+            'status' => 'done',
+            'order_type' => 'takeout',
+            'payment_method' => 'cash',
+            'payment_status' => 'Paid',
+        ]);
+
+        $request = Request::create('/customer/orders', 'GET');
+        $request->setUserResolver(fn () => $user);
+        $response = app(CustomerController::class)->myOrders($request);
+        $html = $response->render();
+
+        $this->assertStringContainsString('Ready for Pick Up', $html);
+        $this->assertStringContainsString('Done', $html);
+        $this->assertStringContainsString('status-pill-' . $order->id, $html);
     }
 
     public function test_admin_review_orders_page_uses_new_order_notification_dot_for_recent_orders(): void
@@ -127,6 +193,7 @@ class OrderStatusNotificationTest extends TestCase
         $html = $response->render();
 
         $this->assertStringContainsString('new-order-dot', $html);
+        $this->assertStringContainsString('admin-order-badge', $html);
         $this->assertStringContainsString(route('admin.orders.new-count'), $html);
     }
 
@@ -159,6 +226,50 @@ class OrderStatusNotificationTest extends TestCase
         $this->getJson('http://localhost/customer/order-updates/count')->assertOk()->assertJson(['count' => 1]);
         $this->get('http://localhost/customer/orders')->assertOk();
         $this->getJson('http://localhost/customer/order-updates/count')->assertOk()->assertJson(['count' => 0]);
+    }
+
+    public function test_customer_sees_updates_on_first_order_update_count_check(): void
+    {
+        $customer = User::factory()->create(['role' => 'user']);
+        $order = Order::create([
+            'user_id' => $customer->id,
+            'total_amount' => 120.00,
+            'status' => 'processing',
+            'order_type' => 'takeout',
+            'payment_method' => 'cash',
+            'payment_status' => 'Paid',
+        ]);
+        OrderAudit::create([
+            'order_id' => $order->id,
+            'user_id' => $customer->id,
+            'actor_id' => User::factory()->create(['role' => 'admin'])->id,
+            'actor_role' => 'admin',
+            'action' => 'status_changed',
+            'message' => 'Status updated to Processing.',
+        ]);
+
+        $this->actingAs($customer)
+            ->getJson('http://localhost/customer/order-updates/count')
+            ->assertOk()
+            ->assertJson(['count' => 1]);
+
+        $this->get('http://localhost/customer/orders')->assertOk();
+        $this->getJson('http://localhost/customer/order-updates/count')
+            ->assertOk()
+            ->assertJson(['count' => 0]);
+    }
+
+    public function test_customer_area_polls_for_order_update_badge_count(): void
+    {
+        $customer = User::factory()->create(['role' => 'user']);
+
+        $html = $this->actingAs($customer)
+            ->get('http://localhost/customer/home')
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringContainsString('customer-order-badge', $html);
+        $this->assertStringContainsString(route('customer.orders.update-count'), $html);
     }
 
     public function test_customer_product_catalog_includes_description_and_reviews_for_detail_modal(): void

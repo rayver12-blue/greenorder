@@ -110,8 +110,8 @@ tr:hover td{background:#fafafa}
     <div class="grid2">
       <div class="card" style="grid-column:1/-1">
         <div class="card-hd">
-          <span class="card-title">Monthly Revenue — Last 12 Months</span>
-          <span class="card-badge">Delivered orders only</span>
+          <span class="card-title">Monthly Revenue — Since July 2026</span>
+          <span class="card-badge">Completed orders</span>
         </div>
         <canvas id="monthChart" height="80"></canvas>
       </div>
@@ -134,7 +134,7 @@ tr:hover td{background:#fafafa}
             <td style="font-weight:800;color:#166534">₱{{ number_format(($p->total_sold ?? 0) * $p->price, 2) }}</td>
           </tr>
           @empty
-          <tr><td colspan="5" style="text-align:center;padding:2rem;color:#9ca3af">No sales data yet. Revenue will appear here after orders are delivered.</td></tr>
+          <tr><td colspan="5" style="text-align:center;padding:2rem;color:#9ca3af">No sales data yet. Revenue will appear here after orders are completed.</td></tr>
           @endforelse
         </tbody>
       </table>

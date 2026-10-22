@@ -152,7 +152,6 @@ tr:hover td{background:#fafafa}
                 data-user-name="{{ $user->name }}"
                 data-user-email="{{ $user->email }}"
                 data-user-mobile="{{ $user->mobile ?? '-' }}"
-                data-user-birthdate="{{ $user->birthdate ? $user->birthdate->format('M j, Y') : '-' }}"
                 data-user-joined="{{ $user->created_at->format('M j, Y') }}"
               >View Orders</button>
             </td>
@@ -209,7 +208,6 @@ function openModal(name, info, orders) {
     <div class="info-grid">
       <div class="info-item"><span>Email</span><strong>${info.email}</strong></div>
       <div class="info-item"><span>Mobile</span><strong>${info.mobile}</strong></div>
-      <div class="info-item"><span>Birthdate</span><strong>${info.birthdate}</strong></div>
       <div class="info-item"><span>Joined</span><strong>${info.joined}</strong></div>
       <div class="info-item"><span>Total Orders</span><strong>${orders ? orders.length : 0}</strong></div>
       <div class="info-item"><span>Customer</span><strong>${name}</strong></div>
@@ -252,7 +250,6 @@ document.querySelectorAll('.btn-log').forEach(btn => {
     const info = {
       email: btn.dataset.userEmail,
       mobile: btn.dataset.userMobile,
-      birthdate: btn.dataset.userBirthdate,
       joined: btn.dataset.userJoined,
     };
     openModal(name, info, orderMap[id]);
@@ -267,7 +264,6 @@ document.addEventListener('keydown', (e) => {
 });
 </script>
 @endsection
-
 
 
 

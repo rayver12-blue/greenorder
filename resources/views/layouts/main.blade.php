@@ -19,9 +19,12 @@
     .logout-confirm{background:#166534;color:#fff}
     .admin-order-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#ef4444;box-shadow:0 0 0 2px rgba(239,68,68,.15);vertical-align:middle;flex-shrink:0}
     .admin-order-dot[hidden]{display:none}
+    .admin-order-badge{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 .35rem;border-radius:999px;background:#dc2626;color:#fff;font-size:.7rem;font-weight:800;line-height:1;flex-shrink:0}
+    .admin-order-badge[hidden]{display:none}
     .admin-order-link{display:inline-flex;align-items:center;gap:.5rem}
-    .customer-order-dot{position:absolute;top:-2px;right:-2px;width:9px;height:9px;border-radius:50%;background:#ef4444;box-shadow:0 0 0 2px #fff}
-    .customer-order-dot[hidden]{display:none}
+    .customer-order-link{position:relative}
+    .customer-order-badge{position:absolute;top:-6px;right:-6px;display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 .3rem;border-radius:999px;background:#dc2626;color:#fff;font-size:.65rem;font-weight:800;line-height:1;box-shadow:0 0 0 2px #fff}
+    .customer-order-badge[hidden]{display:none}
     @media (max-width: 480px){
       .logout-ft{flex-direction:column}
       .logout-btn{width:100%}
@@ -90,15 +93,15 @@
             if (orderDot) orderDot.hidden = !hasNew;
             if (orderLink) {
               orderLink.classList.toggle('admin-order-link', hasNew || orderLink.getAttribute('href') === '{{ route('admin.orders') }}');
-              let dot = orderLink.querySelector('.admin-order-dot');
-              if (!dot) {
-                dot = document.createElement('span');
-                dot.className = 'admin-order-dot';
-                dot.setAttribute('aria-label', 'New orders');
-                dot.hidden = !hasNew;
-                orderLink.appendChild(dot);
+              let badge = orderLink.querySelector('.admin-order-badge');
+              if (!badge) {
+                badge = document.createElement('span');
+                badge.className = 'admin-order-badge';
+                orderLink.appendChild(badge);
               }
-              dot.hidden = !hasNew;
+              badge.textContent = count > 99 ? '99+' : String(count);
+              badge.setAttribute('aria-label', count + (count === 1 ? ' new order' : ' new orders'));
+              badge.hidden = !hasNew;
             }
           })
           .catch(() => {});
@@ -113,20 +116,23 @@
         const customerOrdersUrl = '{{ route('customer.orders') }}';
         const customerUpdatesUrl = '{{ route('customer.orders.update-count') }}';
         const customerOrderLink = document.querySelector(`a[href="${customerOrdersUrl}"]`);
+        customerOrderLink?.classList.add('customer-order-link');
 
         function updateCustomerOrderDot() {
           if (!customerOrderLink) return;
           fetch(customerUpdatesUrl, { headers: { Accept: 'application/json' } })
             .then(r => r.json())
             .then(data => {
-              let dot = customerOrderLink.querySelector('.customer-order-dot');
-              if (!dot) {
-                dot = document.createElement('span');
-                dot.className = 'customer-order-dot';
-                dot.setAttribute('aria-label', 'Order status updated');
-                customerOrderLink.appendChild(dot);
+              const count = Number(data.count || 0);
+              let badge = customerOrderLink.querySelector('.customer-order-badge');
+              if (!badge) {
+                badge = document.createElement('span');
+                badge.className = 'customer-order-badge';
+                customerOrderLink.appendChild(badge);
               }
-              dot.hidden = Number(data.count || 0) === 0;
+              badge.textContent = count > 99 ? '99+' : String(count);
+              badge.setAttribute('aria-label', count + (count === 1 ? ' order update' : ' order updates'));
+              badge.hidden = count === 0;
             })
             .catch(() => {});
         }

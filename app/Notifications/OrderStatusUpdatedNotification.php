@@ -27,7 +27,11 @@ class OrderStatusUpdatedNotification extends Notification
 
     public function toMail(object $notifiable): MailMessage
     {
-        $statusLabel = ucfirst($this->status);
+        $statusLabel = match ($this->status) {
+            'delivered' => 'Ready for Pick Up',
+            'done' => 'Done',
+            default => ucfirst($this->status),
+        };
 
         return (new MailMessage)
             ->subject('Order status updated')

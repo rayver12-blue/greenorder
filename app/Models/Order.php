@@ -49,6 +49,7 @@ class Order extends Model
             'pending'    => '#f59e0b',
             'processing' => '#3b82f6',
             'delivered'  => '#16a34a',
+            'done'       => '#15803d',
             'cancelled'  => '#ef4444',
             default      => '#6b7280',
         };
@@ -60,6 +61,7 @@ class Order extends Model
             'pending'    => 'Order Placed',
             'processing' => 'Being Prepared',
             'delivered'  => 'Ready for Pick Up',
+            'done'       => 'Done',
             'cancelled'  => 'Cancelled',
             default      => ucfirst($this->status),
         };

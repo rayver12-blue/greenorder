@@ -40,6 +40,7 @@ body{background:#f5f5f0;font-family:'Plus Jakarta Sans',sans-serif;margin:0}
 .s-pending   {background:#fff7ed;color:#c2410c}
 .s-processing{background:#eff6ff;color:#1d4ed8}
 .s-delivered {background:#f0fdf4;color:#166534}
+.s-done{background:#dcfce7;color:#14532d}
 .s-cancelled {background:#fef2f2;color:#dc2626}
 .r-section{margin-bottom:1.1rem}
 .r-section-title{font-size:.68rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#9ca3af;margin-bottom:.55rem}
@@ -110,6 +111,7 @@ body{background:#f5f5f0;font-family:'Plus Jakarta Sans',sans-serif;margin:0}
         @if($order->status === 'pending') ⏳ Order Placed
         @elseif($order->status === 'processing') 🍳 Preparing
         @elseif($order->status === 'delivered') ✅ Ready for Pick Up
+        @elseif($order->status === 'done') ✅ Done
         @else ❌ Cancelled @endif
       </div>
     </div>

@@ -13,6 +13,7 @@
   .s-pending    { background: #fff7ed; color: #c2410c; }
   .s-processing { background: #eff6ff; color: #1d4ed8; }
   .s-delivered  { background: #f0fdf4; color: #166534; }
+  .s-done       { background: #dcfce7; color: #14532d; }
   .s-cancelled  { background: #fef2f2; color: #dc2626; }
   .section { margin-bottom: 14px; }
   .section-title { font-size: 9px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; color: #9ca3af; margin-bottom: 6px; }
@@ -48,6 +49,7 @@
       @if($order->status === 'pending') Order Placed
       @elseif($order->status === 'processing') Preparing
       @elseif($order->status === 'delivered') Ready for Pick Up
+      @elseif($order->status === 'done') Done
       @else Cancelled @endif
     </div>
   </div>

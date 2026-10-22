@@ -30,13 +30,9 @@ class CustomerController extends Controller
             ->max('id') ?? 0;
         $seenKey = 'customer.order_updates.last_seen.' . Auth::id();
 
-        if (!$request->session()->has($seenKey)) {
-            $request->session()->put($seenKey, $latestId);
-        }
-
         $count = OrderAudit::where('user_id', Auth::id())
             ->where('action', 'status_changed')
-            ->where('id', '>', (int) $request->session()->get($seenKey))
+            ->where('id', '>', (int) $request->session()->get($seenKey, 0))
             ->count();
 
         return response()->json(['count' => $count]);
@@ -431,6 +427,7 @@ class CustomerController extends Controller
             'pending'    => Order::where('user_id', Auth::id())->where('status', 'pending')->count(),
             'processing' => Order::where('user_id', Auth::id())->where('status', 'processing')->count(),
             'delivered'  => Order::where('user_id', Auth::id())->where('status', 'delivered')->count(),
+            'done'       => Order::where('user_id', Auth::id())->where('status', 'done')->count(),
             'cancelled'  => Order::where('user_id', Auth::id())->where('status', 'cancelled')->count(),
         ];
 
@@ -465,7 +462,7 @@ class CustomerController extends Controller
 
         $order = Order::where('id', $request->order_id)
             ->where('user_id', Auth::id())
-            ->where('status', 'delivered')
+            ->whereIn('status', ['delivered', 'done'])
             ->firstOrFail();
 
         abort_if(!$order->items()->where('product_id', $request->product_id)->exists(), 403);
@@ -516,7 +513,7 @@ class CustomerController extends Controller
     public function activeOrderStatuses()
     {
         $orders = Order::where('user_id', Auth::id())
-            ->whereIn('status', ['pending', 'processing'])
+            ->whereIn('status', ['pending', 'processing', 'delivered'])
             ->get(['id', 'status']);
         return response()->json($orders->mapWithKeys(fn($o) => [$o->id => $o->status]));
     }

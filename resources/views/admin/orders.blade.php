@@ -27,6 +27,7 @@ img,canvas,svg{max-width:100%}
 .stab:not(.active) .stab-count{background:#f0fdf4;color:#166534}
 /* ALERTS */
 .alert-s{background:#f0fdf4;border:1px solid #bbf7d0;color:#166534;border-radius:10px;padding:.7rem 1rem;font-size:.83rem;margin-bottom:1rem;display:flex;align-items:center;gap:.5rem}
+.alert-e{background:#fef2f2;border:1px solid #fecaca;color:#991b1b;border-radius:10px;padding:.7rem 1rem;font-size:.83rem;margin-bottom:1rem;display:flex;align-items:center;gap:.5rem}
 /* TABLE CARD */
 .tcard{background:#fff;border-radius:14px;box-shadow:0 1px 3px rgba(0,0,0,.06);border:1px solid #f0fdf4;overflow:hidden}
 .stabs,.tcard{min-width:0}
@@ -39,6 +40,7 @@ tr:hover td{background:#fafafa}
 .badge-pending   {background:#fff7ed;color:#c2410c}
 .badge-processing{background:#eff6ff;color:#1d4ed8}
 .badge-delivered {background:#f0fdf4;color:#166534}
+.badge-done{background:#dcfce7;color:#14532d}
 .badge-cancelled {background:#fef2f2;color:#dc2626}
 /* STATUS UPDATE */
 .su-form{display:flex;align-items:center;gap:.4rem}
@@ -134,10 +136,13 @@ tr:hover td{background:#fafafa}
     @if(session('success'))
       <div class="alert-s"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>{{ session('success') }}</div>
     @endif
+    @if(session('error'))
+      <div class="alert-e">{{ session('error') }}</div>
+    @endif
 
     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.65rem;margin-bottom:1rem">
       <div class="stabs" style="margin-bottom:0">
-        @foreach(['all','pending','processing','delivered','cancelled'] as $s)
+        @foreach(['all','pending','processing','delivered','done','cancelled'] as $s)
           <a href="{{ route('admin.orders', ['status'=>$s]) }}"
              class="stab {{ $status===$s ? 'active':'' }}">
             {{ $s === 'delivered' ? 'Ready for Pick Up' : ucfirst($s) }}
@@ -191,8 +196,8 @@ tr:hover td{background:#fafafa}
               <form method="POST" action="{{ route('admin.orders.status', $order) }}" class="su-form">
                 @csrf @method('PATCH')
                 <select name="status" class="su-select">
-                  @foreach(['pending','processing','delivered','cancelled'] as $s)
-                    <option value="{{ $s }}" {{ $order->status===$s ? 'selected':'' }}>{{ $s === 'delivered' ? 'Ready for Pick Up' : ucfirst($s) }}</option>
+                    @foreach(['pending','processing','delivered','done','cancelled'] as $s)
+                    <option value="{{ $s }}" {{ $order->status===$s ? 'selected':'' }} {{ $s === 'done' && $order->status !== 'delivered' && $order->status !== 'done' ? 'disabled' : '' }}>{{ $s === 'delivered' ? 'Ready for Pick Up' : ucfirst($s) }}</option>
                   @endforeach
                 </select>
                 <button type="submit" class="su-btn">Save</button>

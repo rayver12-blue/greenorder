@@ -65,6 +65,7 @@ tr:hover td{background:#fafafa}
 .badge-pending   {background:#fff7ed;color:#c2410c}
 .badge-processing{background:#eff6ff;color:#1d4ed8}
 .badge-delivered {background:#f0fdf4;color:#166534}
+.badge-done{background:#dcfce7;color:#14532d}
 .badge-cancelled {background:#fef2f2;color:#dc2626}
 /* FLASH */
 .alert-success{background:#f0fdf4;border:1px solid #bbf7d0;color:#166534;border-radius:10px;padding:.7rem 1rem;font-size:.83rem;margin-bottom:1rem;display:flex;align-items:center;gap:.5rem}
@@ -164,7 +165,7 @@ tr:hover td{background:#fafafa}
           <div class="stat-ico"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
         </div>
         <div class="stat-val">₱{{ number_format($monthRevenue,0) }}</div>
-        <div class="stat-sub">{{ $monthDelivered }} delivered this month</div>
+        <div class="stat-sub">{{ $monthCompleted }} completed this month</div>
       </div>
     </div>
 
@@ -182,7 +183,7 @@ tr:hover td{background:#fafafa}
       <div class="card">
         <div class="card-hd">
           <span class="card-title">Daily Revenue — Last 14 Days</span>
-          <span class="card-badge">Delivered orders</span>
+          <span class="card-badge">Completed orders</span>
         </div>
         <div style="position: relative; height: 280px;">
           <canvas id="revChart"></canvas>
